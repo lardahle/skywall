@@ -1,0 +1,5 @@
+.venv/
+.superpowers/
+__pycache__/
+*.png
+*.egg-info/
