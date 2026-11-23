@@ -14,13 +14,14 @@ def P():
     return StereographicProjection(296.0, 0.0, 60.0, 3440, 1440)
 
 
-def scene(star_az=(), star_alt=(), star_mag=(), star_bv=(), hips=None, bodies=(), names=None):
+def scene(star_az=(), star_alt=(), star_mag=(), star_bv=(), hips=None, bodies=(), names=None, desigs=None):
     hips = list(hips) if hips is not None else list(range(1, len(star_az) + 1))
     names = list(names) if names is not None else [""] * len(star_az)
+    desigs = list(desigs) if desigs is not None else [""] * len(star_az)
     return SkyScene(when=datetime(2026, 11, 22, tzinfo=timezone.utc),
                     star_az=np.array(star_az, float), star_alt=np.array(star_alt, float),
                     star_mag=np.array(star_mag, float), star_bv=np.array(star_bv, float),
-                    star_name=np.array(names, dtype=object),
+                    star_name=np.array(names, dtype=object), star_designation=np.array(desigs, dtype=object),
                     hip_index={h: i for i, h in enumerate(hips)}, bodies=list(bodies))
 
 
@@ -85,3 +86,25 @@ def test_faint_named_star_not_labelled():
     on = render_sky(sc, [], P(), Config(show_horizon=False))
     off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_names=False))
     assert bytes(on.get_data()) == bytes(off.get_data())
+
+
+def test_unnamed_star_gets_greek_label():
+    sc = scene([296.0], [10.0], [4.2], [0.0], desigs=["ζ Boo"])
+    on = render_sky(sc, [], P(), Config(show_horizon=False))
+    off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_designations=False))
+    assert bytes(on.get_data()) != bytes(off.get_data())
+
+
+def test_proper_name_wins_over_designation():
+    both = render_sky(scene([296.0], [10.0], [0.0], [0.0], names=["Testar"], desigs=["α Tst"]), [], P(),
+                      Config(show_horizon=False))
+    name_only = render_sky(scene([296.0], [10.0], [0.0], [0.0], names=["Testar"]), [], P(),
+                           Config(show_horizon=False))
+    assert bytes(both.get_data()) == bytes(name_only.get_data())
+
+
+def test_dim_named_star_falls_back_to_designation():
+    sc = scene([296.0], [10.0], [4.2], [0.0], names=["Xuange"], desigs=["λ Boo"])
+    on = render_sky(sc, [], P(), Config(show_horizon=False))
+    off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_designations=False))
+    assert bytes(on.get_data()) != bytes(off.get_data())

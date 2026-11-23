@@ -11,7 +11,21 @@ from .config import DATA_DIR
 from .runner import Runner, run
 
 CATALOG_MAG = 8.0  # stored catalogue depth; renders filter to cfg.mag_limit
-CATALOG_VERSION = 2
+CATALOG_VERSION = 3
+
+GREEK = {"Alp": "α", "Bet": "β", "Gam": "γ", "Del": "δ", "Eps": "ε", "Zet": "ζ", "Eta": "η",
+         "The": "θ", "Iot": "ι", "Kap": "κ", "Lam": "λ", "Mu": "μ", "Nu": "ν", "Xi": "ξ",
+         "Omi": "ο", "Pi": "π", "Rho": "ρ", "Sig": "σ", "Tau": "τ", "Ups": "υ", "Phi": "φ",
+         "Chi": "χ", "Psi": "ψ", "Ome": "ω"}
+_SUPERSCRIPT = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def bayer_label(bayer: str, con: str) -> str:
+    """HYG Bayer code + constellation → e.g. "Kap-2", "Boo" → "κ² Boo"."""
+    if not bayer:
+        return ""
+    letter, _, num = bayer.partition("-")
+    return f"{GREEK.get(letter, letter)}{num.translate(_SUPERSCRIPT)} {con}".strip()
 CATALOG_EPOCH_JD = 2451545.0  # J2000: HYG positions are J2000
 HYG_URL = "https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv"
 STELLARIUM_APP = "org.stellarium.Stellarium"
@@ -32,6 +46,7 @@ class StarCatalog:
     mag: np.ndarray
     bv: np.ndarray
     name: np.ndarray  # proper name or ""
+    designation: np.ndarray  # Bayer letter, e.g. "ζ Boo", or ""
 
 
 @dataclass
@@ -65,7 +80,7 @@ def _build_constellations(index: Path, out: Path) -> None:
 def _parse_hyg(csv_path: Path, mag_limit: float, keep: set[int] = frozenset()) -> dict[str, np.ndarray]:
     """Stars brighter than mag_limit, plus any HIP in `keep` (constellation-line stars)."""
     import csv
-    rows, names = [], []
+    rows, names, desigs = [], [], []
     with open(csv_path, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             if not r["hip"] or not r["mag"]:
@@ -76,10 +91,11 @@ def _parse_hyg(csv_path: Path, mag_limit: float, keep: set[int] = frozenset()) -
                          float(r["pmra"] or 0), float(r["pmdec"] or 0), float(r["mag"]),
                          float(r["ci"]) if r["ci"] else np.nan))
             names.append(r["proper"] or "")
+            desigs.append(bayer_label(r["bayer"], r["con"]))
     a = np.array(rows, dtype=float)
     return {"hip": a[:, 0].astype(int), "ra_deg": a[:, 1], "dec_deg": a[:, 2],
             "pm_ra_mas": a[:, 3], "pm_dec_mas": a[:, 4], "mag": a[:, 5], "bv": a[:, 6],
-            "name": np.array(names, dtype=str), "version": np.array(CATALOG_VERSION)}
+            "name": np.array(names, dtype=str), "designation": np.array(desigs, dtype=str), "version": np.array(CATALOG_VERSION)}
 
 
 def ensure_data(data_dir: Path = DATA_DIR, mag_limit: float = 6.5, runner: Runner = run) -> None:

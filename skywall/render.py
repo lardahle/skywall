@@ -20,6 +20,7 @@ CONST_LABEL_COLOR = (0.56, 0.70, 1.0, 0.75)
 CONST_LABEL_SIZE = 15
 BODY_LABEL_SIZE = 15
 STAR_LABEL_MAG = 4.0  # named stars at least this bright get a label
+DESIGNATION_LABEL_MAG = 4.5  # unnamed stars get their Greek letter down to this
 STAR_LABEL_SIZE = 13
 STAR_LABEL_COLOR = (0.86, 0.86, 0.80, 0.72)
 HORIZON_COLOR = (0.45, 0.65, 0.45, 0.55)
@@ -250,13 +251,21 @@ def render_sky(scene: SkyScene, constellations: list[Constellation],
             labels.place(body.name, p[0] + rad + 6, p[1] + BODY_LABEL_SIZE / 3,
                          BODY_LABEL_SIZE, (*rgb, 0.9))
 
-    if cfg.show_star_names:
+    if cfg.show_star_names or cfg.show_star_designations:
         for i in np.argsort(scene.star_mag):
             mag = float(scene.star_mag[i])
-            if mag > STAR_LABEL_MAG:
+            if mag > max(STAR_LABEL_MAG, DESIGNATION_LABEL_MAG):
                 break
-            name = str(scene.star_name[i])
-            if not name or not sok[i] or not _on_screen(sx[i], sy[i], W, H):
+            if not sok[i] or not _on_screen(sx[i], sy[i], W, H):
+                continue
+            proper = str(scene.star_name[i]) if cfg.show_star_names else ""
+            if proper and mag <= STAR_LABEL_MAG:
+                name = proper
+            elif cfg.show_star_designations and mag <= DESIGNATION_LABEL_MAG:
+                name = str(scene.star_designation[i])
+            else:
+                name = ""
+            if not name:
                 continue
             rad = star_radius(mag)
             labels.place(name, sx[i] + rad + 5, sy[i] - rad - 2, STAR_LABEL_SIZE, STAR_LABEL_COLOR)

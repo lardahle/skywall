@@ -131,6 +131,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         for title, attr in (("Constellation lines", "show_constellation_lines"),
                             ("Constellation names", "show_constellation_names"),
                             ("Star names", "show_star_names"),
+                            ("Greek-letter labels", "show_star_designations"),
                             ("Planet labels", "show_planet_labels"),
                             ("Horizon and compass", "show_horizon"),
                             ("Last-updated time", "show_timestamp")):

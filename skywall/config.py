@@ -32,6 +32,7 @@ class Config:
     show_constellation_lines: bool = True
     show_constellation_names: bool = True
     show_star_names: bool = True
+    show_star_designations: bool = True
     show_planet_labels: bool = True
     show_horizon: bool = True
     show_timestamp: bool = False
