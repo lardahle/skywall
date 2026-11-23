@@ -31,3 +31,8 @@ def test_projection_setting(tmp_path):
     assert load_config(p).projection == "perspective"
     p.write_text('projection = "stereographic"\n')
     assert load_config(p).projection == "stereographic"
+
+
+def test_detail_defaults(tmp_path):
+    cfg = load_config(tmp_path / "c.toml")
+    assert cfg.mag_limit == 7.0 and cfg.show_star_names is True

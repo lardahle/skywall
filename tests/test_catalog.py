@@ -38,3 +38,14 @@ def test_every_constellation_line_star_present(data):
     hips = set(load_stars(data).hip.tolist())
     needed = {h for c in load_constellations(data) for line in c.lines for h in line}
     assert needed <= hips
+
+
+@pytest.mark.network
+def test_star_names(data):
+    s = load_stars(data)
+    assert s.name[list(s.hip).index(69673)] == "Arcturus"
+
+
+@pytest.mark.network
+def test_fainter_limit_gives_more_stars(data):
+    assert len(load_stars(data, mag_limit=7.5).hip) > len(load_stars(data, mag_limit=6.5).hip) + 5000

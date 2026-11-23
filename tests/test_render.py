@@ -14,11 +14,13 @@ def P():
     return StereographicProjection(296.0, 0.0, 60.0, 3440, 1440)
 
 
-def scene(star_az=(), star_alt=(), star_mag=(), star_bv=(), hips=None, bodies=()):
+def scene(star_az=(), star_alt=(), star_mag=(), star_bv=(), hips=None, bodies=(), names=None):
     hips = list(hips) if hips is not None else list(range(1, len(star_az) + 1))
+    names = list(names) if names is not None else [""] * len(star_az)
     return SkyScene(when=datetime(2026, 11, 22, tzinfo=timezone.utc),
                     star_az=np.array(star_az, float), star_alt=np.array(star_alt, float),
                     star_mag=np.array(star_mag, float), star_bv=np.array(star_bv, float),
+                    star_name=np.array(names, dtype=object),
                     hip_index={h: i for i, h in enumerate(hips)}, bodies=list(bodies))
 
 
@@ -67,3 +69,19 @@ def test_lines_toggle_off():
     (x1, y1), (x2, y2) = P().project(290.0, 10.0), P().project(302.0, 10.0)
     mx, my = round((x1 + x2) / 2), round((y1 + y2) / 2)
     assert window_sum(on, mx, my) > window_sum(off, mx, my)
+
+
+def test_bright_named_star_gets_label():
+    sc = scene([296.0], [10.0], [0.0], [0.0], names=["Testar"])
+    on = render_sky(sc, [], P(), Config(show_horizon=False))
+    off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_names=False))
+    x, y = P().project(296.0, 10.0)
+    region = [(round(x) + dx, round(y) + dy) for dx in range(12, 70, 2) for dy in range(-12, 8, 2)]
+    assert sum(sum(px(on, *p)) for p in region) > sum(sum(px(off, *p)) for p in region) + 0.5
+
+
+def test_faint_named_star_not_labelled():
+    sc = scene([296.0], [10.0], [5.5], [0.0], names=["Faintar"])
+    on = render_sky(sc, [], P(), Config(show_horizon=False))
+    off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_names=False))
+    assert bytes(on.get_data()) == bytes(off.get_data())

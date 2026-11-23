@@ -24,3 +24,8 @@ def test_below_horizon_stars_kept(data):
     sc = compute_scene(*GREENWICH, 0.0, datetime(2026, 11, 22, tzinfo=timezone.utc), load_stars(data), data)
     assert (sc.star_alt < 0).sum() > 3000  # see-through Earth
     assert sc.bodies[1].name == "Moon" and 0.0 <= sc.bodies[1].phase_fraction <= 1.0
+
+
+def test_scene_carries_star_names(data):
+    sc = compute_scene(*GREENWICH, 0.0, datetime(2026, 11, 22, tzinfo=timezone.utc), load_stars(data), data)
+    assert sc.star_name[sc.hip_index[69673]] == "Arcturus"

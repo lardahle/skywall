@@ -10,6 +10,8 @@ import numpy as np
 from .config import DATA_DIR
 from .runner import Runner, run
 
+CATALOG_MAG = 8.0  # stored catalogue depth; renders filter to cfg.mag_limit
+CATALOG_VERSION = 2
 CATALOG_EPOCH_JD = 2451545.0  # J2000: HYG positions are J2000
 HYG_URL = "https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv"
 STELLARIUM_APP = "org.stellarium.Stellarium"
@@ -29,6 +31,7 @@ class StarCatalog:
     pm_dec_mas: np.ndarray
     mag: np.ndarray
     bv: np.ndarray
+    name: np.ndarray  # proper name or ""
 
 
 @dataclass
@@ -62,7 +65,7 @@ def _build_constellations(index: Path, out: Path) -> None:
 def _parse_hyg(csv_path: Path, mag_limit: float, keep: set[int] = frozenset()) -> dict[str, np.ndarray]:
     """Stars brighter than mag_limit, plus any HIP in `keep` (constellation-line stars)."""
     import csv
-    rows = []
+    rows, names = [], []
     with open(csv_path, newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             if not r["hip"] or not r["mag"]:
@@ -72,9 +75,11 @@ def _parse_hyg(csv_path: Path, mag_limit: float, keep: set[int] = frozenset()) -
             rows.append((int(r["hip"]), float(r["ra"]) * 15.0, float(r["dec"]),
                          float(r["pmra"] or 0), float(r["pmdec"] or 0), float(r["mag"]),
                          float(r["ci"]) if r["ci"] else np.nan))
+            names.append(r["proper"] or "")
     a = np.array(rows, dtype=float)
     return {"hip": a[:, 0].astype(int), "ra_deg": a[:, 1], "dec_deg": a[:, 2],
-            "pm_ra_mas": a[:, 3], "pm_dec_mas": a[:, 4], "mag": a[:, 5], "bv": a[:, 6]}
+            "pm_ra_mas": a[:, 3], "pm_dec_mas": a[:, 4], "mag": a[:, 5], "bv": a[:, 6],
+            "name": np.array(names, dtype=str), "version": np.array(CATALOG_VERSION)}
 
 
 def ensure_data(data_dir: Path = DATA_DIR, mag_limit: float = 6.5, runner: Runner = run) -> None:
@@ -82,6 +87,8 @@ def ensure_data(data_dir: Path = DATA_DIR, mag_limit: float = 6.5, runner: Runne
     cons = data_dir / "constellations.json"
     stars = data_dir / "stars.npz"
     sky = data_dir / "skyfield"
+    if stars.exists() and _stars_version(stars) != CATALOG_VERSION:
+        stars.unlink()  # older layout: rebuild from the cached CSV
     if cons.exists() and stars.exists() and (sky / "de421.bsp").exists():
         return
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -95,14 +102,26 @@ def ensure_data(data_dir: Path = DATA_DIR, mag_limit: float = 6.5, runner: Runne
             with load.open(HYG_URL, filename="hygdata_v41.csv") as f:
                 src = Path(f.name)
             keep = {h for c in load_constellations(data_dir) for line in c.lines for h in line}
-            np.savez(stars, **_parse_hyg(src, mag_limit, keep))
+            np.savez(stars, **_parse_hyg(src, CATALOG_MAG, keep))
     except OSError as e:
         raise DataUnavailable(f"download failed: {e}") from e
 
 
-def load_stars(data_dir: Path = DATA_DIR) -> StarCatalog:
+def _stars_version(path: Path) -> int:
+    try:
+        with np.load(path) as z:
+            return int(z["version"]) if "version" in z.files else 1
+    except (OSError, ValueError):
+        return 0
+
+
+def load_stars(data_dir: Path = DATA_DIR, mag_limit: float = 6.5) -> StarCatalog:
+    """Stars down to `mag_limit`, plus any star a constellation line needs."""
     with np.load(Path(data_dir) / "stars.npz") as z:
-        return StarCatalog(**{k: z[k] for k in z.files})
+        cols = {k: z[k] for k in z.files if k != "version"}
+    keep = {h for c in load_constellations(data_dir) for line in c.lines for h in line}
+    mask = (cols["mag"] <= mag_limit) | np.isin(cols["hip"], list(keep))
+    return StarCatalog(**{k: v[mask] for k, v in cols.items()})
 
 
 def load_constellations(data_dir: Path = DATA_DIR) -> list[Constellation]:

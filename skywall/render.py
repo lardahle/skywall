@@ -19,6 +19,9 @@ LINE_WIDTH = 1.4
 CONST_LABEL_COLOR = (0.56, 0.70, 1.0, 0.75)
 CONST_LABEL_SIZE = 15
 BODY_LABEL_SIZE = 15
+STAR_LABEL_MAG = 4.0  # named stars at least this bright get a label
+STAR_LABEL_SIZE = 13
+STAR_LABEL_COLOR = (0.86, 0.86, 0.80, 0.72)
 HORIZON_COLOR = (0.45, 0.65, 0.45, 0.55)
 COMPASS_SIZE = 14
 FONT = "Sans"
@@ -49,11 +52,11 @@ def bv_to_rgb(bv: float) -> tuple[float, float, float]:
 
 
 def star_radius(mag: float) -> float:
-    return max(0.5, 0.6 + (6.5 - mag) * (3.4 / 8.0))
+    return max(0.7, 0.8 + (7.0 - mag) * 0.5)
 
 
 def star_alpha(mag: float) -> float:
-    return min(1.0, max(0.25, 0.35 + (6.5 - mag) / 6.0))
+    return min(1.0, max(0.35, 0.45 + (7.0 - mag) / 5.0))
 
 
 class _Labels:
@@ -211,7 +214,7 @@ def render_sky(scene: SkyScene, constellations: list[Constellation],
         mag = float(scene.star_mag[i])
         r, g, b = bv_to_rgb(float(scene.star_bv[i]))
         rad = star_radius(mag)
-        if mag < 1.5:
+        if mag < 3.0:
             glow = cairo.RadialGradient(sx[i], sy[i], 0, sx[i], sy[i], rad * 4)
             glow.add_color_stop_rgba(0, r, g, b, 0.25)
             glow.add_color_stop_rgba(1, r, g, b, 0.0)
@@ -246,6 +249,17 @@ def render_sky(scene: SkyScene, constellations: list[Constellation],
         if cfg.show_planet_labels:
             labels.place(body.name, p[0] + rad + 6, p[1] + BODY_LABEL_SIZE / 3,
                          BODY_LABEL_SIZE, (*rgb, 0.9))
+
+    if cfg.show_star_names:
+        for i in np.argsort(scene.star_mag):
+            mag = float(scene.star_mag[i])
+            if mag > STAR_LABEL_MAG:
+                break
+            name = str(scene.star_name[i])
+            if not name or not sok[i] or not _on_screen(sx[i], sy[i], W, H):
+                continue
+            rad = star_radius(mag)
+            labels.place(name, sx[i] + rad + 5, sy[i] - rad - 2, STAR_LABEL_SIZE, STAR_LABEL_COLOR)
 
     if cfg.show_constellation_names:
         for name, cx, cy in name_spots:

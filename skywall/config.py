@@ -28,9 +28,10 @@ class Config:
     projection: str = "perspective"  # perspective (true window) | stereographic (better for wide FOV)
     width: int = 3440
     height: int = 1440
-    mag_limit: float = 6.5
+    mag_limit: float = 7.0
     show_constellation_lines: bool = True
     show_constellation_names: bool = True
+    show_star_names: bool = True
     show_planet_labels: bool = True
     show_horizon: bool = True
     show_timestamp: bool = False

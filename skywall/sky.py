@@ -33,6 +33,7 @@ class SkyScene:
     star_alt: np.ndarray
     star_mag: np.ndarray
     star_bv: np.ndarray
+    star_name: np.ndarray
     hip_index: dict[int, int]
     bodies: list[Body]
 
@@ -62,5 +63,5 @@ def compute_scene(lat: float, lon: float, elevation_m: float, when: datetime,
         bodies.append(body)
 
     return SkyScene(when=when, star_az=az.degrees, star_alt=alt.degrees,
-                    star_mag=stars.mag, star_bv=stars.bv,
+                    star_mag=stars.mag, star_bv=stars.bv, star_name=stars.name,
                     hip_index={int(h): i for i, h in enumerate(stars.hip)}, bodies=bodies)

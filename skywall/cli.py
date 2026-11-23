@@ -43,7 +43,7 @@ def _has_location(cfg: Config) -> bool:
 def render_to(cfg: Config, out: Path, data: Path) -> None:
     ensure_data(data, cfg.mag_limit)
     now = datetime.now(timezone.utc)
-    scene = compute_scene(cfg.latitude, cfg.longitude, cfg.elevation_m, now, load_stars(data), data)
+    scene = compute_scene(cfg.latitude, cfg.longitude, cfg.elevation_m, now, load_stars(data, cfg.mag_limit), data)
     proj = make_projection(cfg.projection, true_facing_deg(cfg, now), cfg.tilt_deg, cfg.fov_deg,
                            cfg.width, cfg.height)
     surface = render_sky(scene, load_constellations(data), proj, cfg)

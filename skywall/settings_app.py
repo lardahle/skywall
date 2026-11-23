@@ -130,6 +130,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         chart = Adw.PreferencesGroup(title="Chart")
         for title, attr in (("Constellation lines", "show_constellation_lines"),
                             ("Constellation names", "show_constellation_names"),
+                            ("Star names", "show_star_names"),
                             ("Planet labels", "show_planet_labels"),
                             ("Horizon and compass", "show_horizon"),
                             ("Last-updated time", "show_timestamp")):
