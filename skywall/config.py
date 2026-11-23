@@ -2,7 +2,7 @@
 
 import os
 import tomllib
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 
 import tomli_w
@@ -65,3 +65,11 @@ def save_config(cfg: Config, path: Path = CONFIG_PATH) -> None:
     with open(tmp, "wb") as f:
         tomli_w.dump(data, f)
     os.replace(tmp, path)
+
+
+CLI_OWNED = ("live_wallpaper", "autostart", "saved_wallpaper")
+
+
+def merge_owned(fresh: Config, edited: Config) -> Config:
+    """`edited` (e.g. the settings window's copy) with the CLI-owned fields taken from `fresh`."""
+    return replace(edited, **{k: getattr(fresh, k) for k in CLI_OWNED})

@@ -1,5 +1,7 @@
 """Set, save and restore the GNOME desktop background via gsettings."""
 
+import ast
+
 from pathlib import Path
 
 from .config import Config
@@ -11,7 +13,11 @@ NAMES = ("sky-a.png", "sky-b.png")
 
 
 def _get(key: str, runner: Runner) -> str:
-    return runner(["gsettings", "get", SCHEMA, key]).strip().strip("'")
+    raw = runner(["gsettings", "get", SCHEMA, key]).strip()
+    try:
+        return ast.literal_eval(raw) if raw[:1] in "'\"" else raw
+    except (ValueError, SyntaxError):
+        return raw.strip("'")
 
 
 def _set(key: str, value: str, runner: Runner) -> None:
@@ -48,4 +54,6 @@ def restore(cfg: Config, runner: Runner = run) -> None:
     for k in KEYS:
         if cfg.saved_wallpaper.get(k):
             _set(k, cfg.saved_wallpaper[k], runner)
+        else:
+            runner(["gsettings", "reset", SCHEMA, k])  # never write an empty URI
     cfg.saved_wallpaper = {}

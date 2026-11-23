@@ -49,5 +49,9 @@ def stop(runner: Runner = run) -> None:
     runner(["systemctl", "--user", "stop", TIMER_NAME])
 
 
+def stop_service(runner: Runner = run) -> None:
+    runner(["systemctl", "--user", "stop", SERVICE_NAME])
+
+
 def set_autostart(enabled: bool, runner: Runner = run) -> None:
     runner(["systemctl", "--user", "enable" if enabled else "disable", TIMER_NAME])

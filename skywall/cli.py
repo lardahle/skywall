@@ -1,8 +1,12 @@
 """Command line: skywall render | enable | disable | autostart | open | install | settings."""
 
 import argparse
+import contextlib
+import fcntl
 import os
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,26 +47,65 @@ def render_to(cfg: Config, out: Path, data: Path) -> None:
                                    cfg.width, cfg.height)
     surface = render_sky(scene, load_constellations(data), proj, cfg)
     out.parent.mkdir(parents=True, exist_ok=True)
-    tmp = out.with_name(out.stem + ".tmp.png")
-    surface.write_to_png(str(tmp))
-    os.replace(tmp, out)
+    fd, tmp = tempfile.mkstemp(prefix=out.stem + ".", suffix=".tmp.png", dir=out.parent)
+    os.close(fd)
+    try:
+        surface.write_to_png(tmp)
+        os.replace(tmp, out)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+@contextlib.contextmanager
+def render_lock(data: Path, blocking: bool = True):
+    """One render/download at a time (timer, settings window and CLI share the data dir)."""
+    data = Path(data)
+    data.mkdir(parents=True, exist_ok=True)
+    with open(data / ".lock", "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def _render_wallpaper(cfg: Config, data: Path) -> int:
+    with render_lock(data):
+        out = next_wallpaper_path(data / "wallpaper")
+        try:
+            render_to(cfg, out, data)
+        except DataUnavailable as e:
+            print(f"skywall: star data unavailable: {e}", file=sys.stderr)
+            return 3
+        set_wallpaper(out, RUNNER)
+    return 0
 
 
 def cmd_render(args) -> int:
     cfg = load_config(config_path())
+    if not args.output and not cfg.live_wallpaper:
+        return 0  # live wallpaper is off: never touch the desktop
     if not _has_location(cfg):
         print(NO_LOCATION, file=sys.stderr)
         return 2
     data = data_dir()
-    out = Path(args.output) if args.output else next_wallpaper_path(data / "wallpaper")
+    if not args.output:
+        return _render_wallpaper(cfg, data)
     try:
-        render_to(cfg, out, data)
+        with render_lock(data):
+            render_to(cfg, Path(args.output), data)
     except DataUnavailable as e:
         print(f"skywall: star data unavailable: {e}", file=sys.stderr)
         return 3
-    if not args.output:
-        set_wallpaper(out, RUNNER)
     return 0
+
+
+def _quietly(fn, *a) -> None:
+    try:
+        fn(*a)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"skywall: {e}", file=sys.stderr)
 
 
 def cmd_enable(args) -> int:
@@ -74,19 +117,29 @@ def cmd_enable(args) -> int:
     save_current(cfg, data_dir() / "wallpaper", RUNNER)
     cfg.live_wallpaper = True
     save_config(cfg, path)
+    code = _render_wallpaper(cfg, data_dir())
+    if code:  # wallpaper was never changed: just roll the config back
+        cfg = load_config(path)
+        cfg.live_wallpaper = False
+        cfg.saved_wallpaper = {}
+        save_config(cfg, path)
+        return code
     scheduler.start(RUNNER)
-    return cmd_render(argparse.Namespace(output=None))
+    return 0
 
 
 def cmd_disable(args) -> int:
     path = config_path()
     cfg = load_config(path)
-    scheduler.stop(RUNNER)
-    scheduler.set_autostart(False, RUNNER)
-    restore(cfg, RUNNER)
-    cfg.live_wallpaper = False
+    cfg.live_wallpaper = False  # saved first: any render still in flight becomes a no-op
     cfg.autostart = False
     save_config(cfg, path)
+    with render_lock(data_dir()):
+        restore(cfg, RUNNER)
+    save_config(cfg, path)
+    _quietly(scheduler.stop, RUNNER)
+    _quietly(scheduler.stop_service, RUNNER)
+    _quietly(scheduler.set_autostart, False, RUNNER)
     return 0
 
 

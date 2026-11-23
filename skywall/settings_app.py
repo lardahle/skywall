@@ -11,7 +11,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from . import cli  # noqa: E402
-from .config import load_config, save_config  # noqa: E402
+from .config import load_config, merge_owned, save_config  # noqa: E402
 from .geomag import true_facing_deg  # noqa: E402
 from .stellarium import read_stellarium_location  # noqa: E402
 
@@ -34,8 +34,18 @@ class SettingsWindow(Adw.PreferencesWindow):
     def _toast(self, text: str) -> None:
         self.add_toast(Adw.Toast(title=text, timeout=4))
 
-    def _changed(self) -> None:
+    def _save(self) -> None:
+        """Save the window's fields without clobbering what the CLI owns (live, autostart, saved wallpaper)."""
+        self.cfg = merge_owned(load_config(cli.config_path()), self.cfg)
         save_config(self.cfg, cli.config_path())
+
+    def _cancel_pending(self) -> None:
+        if self._pending:
+            GLib.source_remove(self._pending)
+            self._pending = 0
+
+    def _changed(self) -> None:
+        self._save()
         if self.cfg.live_wallpaper:
             if self._pending:
                 GLib.source_remove(self._pending)
@@ -43,7 +53,11 @@ class SettingsWindow(Adw.PreferencesWindow):
 
     def _in_worker(self, fn, done=None) -> None:
         def work():
-            code = fn()
+            try:
+                code = fn()
+            except Exception as e:  # never leave the UI waiting on a dead thread
+                print(f"skywall: {e}", file=__import__("sys").stderr)
+                code = 1
             GLib.idle_add(lambda: (done(code) if done else None, False)[1])
         threading.Thread(target=work, daemon=True).start()
 
@@ -217,10 +231,14 @@ class SettingsWindow(Adw.PreferencesWindow):
             self._toast("Set your location first")
             self.live_sw.set_active(False)
             return
-        save_config(self.cfg, cli.config_path())
+        self._cancel_pending()
+        self._save()
         fn = cli.cmd_enable if on else cli.cmd_disable
+        self.live_sw.set_sensitive(False)
+        self.auto_sw.set_sensitive(False)
 
         def done(code):
+            self.live_sw.set_sensitive(True)
             self.cfg = load_config(cli.config_path())
             if code:
                 self._toast(f"Couldn't turn the live wallpaper {'on' if on else 'off'} (code {code})")
@@ -238,7 +256,7 @@ class SettingsWindow(Adw.PreferencesWindow):
             self.auto_sw.set_active(self.cfg.autostart)
 
     def _on_open(self, _btn) -> None:
-        save_config(self.cfg, cli.config_path())
+        self._save()
         if cli.cmd_open(argparse.Namespace()) == 2:
             self._toast("Set your location first")
 
