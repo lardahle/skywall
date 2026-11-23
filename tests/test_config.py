@@ -3,7 +3,7 @@ from skywall.config import Config, load_config, save_config
 
 def test_missing_file_gives_defaults(tmp_path):
     cfg = load_config(tmp_path / "c.toml")
-    assert cfg.facing_deg == 296.0 and cfg.facing_reference == "magnetic"
+    assert cfg.facing_deg == 180.0 and cfg.facing_reference == "magnetic"
     assert cfg.fov_deg == 60.0 and (cfg.width, cfg.height) == (3440, 1440)
     assert cfg.latitude is None
 

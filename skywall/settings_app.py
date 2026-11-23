@@ -29,6 +29,9 @@ class SettingsWindow(Adw.PreferencesWindow):
         self.add(self._location_page())
         self.add(self._system_page())
         self._refresh_true_facing()
+        if self.cfg.latitude is None or self.cfg.longitude is None:  # first run
+            self.set_visible_page(self._loc_page)
+            self._toast("Welcome! Set your location and which way your monitor faces")
 
     # ── helpers ────────────────────────────────────────────────────────────
     def _toast(self, text: str) -> None:
@@ -141,6 +144,7 @@ class SettingsWindow(Adw.PreferencesWindow):
 
     def _location_page(self):
         page = Adw.PreferencesPage(title="Location", icon_name="find-location-symbolic")
+        self._loc_page = page
         place = Adw.PreferencesGroup(title="Where you are",
                                      description="Used only on this computer. Nothing is looked up online.")
         self.lat_row = Adw.EntryRow(title="Latitude", show_apply_button=True)

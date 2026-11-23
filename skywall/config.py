@@ -21,7 +21,7 @@ class Config:
     latitude: float | None = None
     longitude: float | None = None
     elevation_m: float = 0.0
-    facing_deg: float = 296.0
+    facing_deg: float = 180.0
     facing_reference: str = "magnetic"
     tilt_deg: float = 0.0
     fov_deg: float = 60.0

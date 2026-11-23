@@ -27,7 +27,7 @@ def bayer_label(bayer: str, con: str) -> str:
     letter, _, num = bayer.partition("-")
     return f"{GREEK.get(letter, letter)}{num.translate(_SUPERSCRIPT)} {con}".strip()
 CATALOG_EPOCH_JD = 2451545.0  # J2000: HYG positions are J2000
-HYG_URL = "https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv"
+HYG_URL = "https://raw.githubusercontent.com/astronexus/HYG-Database/c7f7f883fe678cc7680169a50ccd7dcc49b060ce/hyg/CURRENT/hygdata_v41.csv"
 STELLARIUM_APP = "org.stellarium.Stellarium"
 _MODERN_INDEX = "files/share/stellarium/skycultures/modern/index.json"
 

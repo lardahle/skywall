@@ -13,12 +13,12 @@ def test_declination_boulder_is_about_7_east():
 
 
 def test_true_reference_passthrough():
-    cfg = Config(latitude=40.0, longitude=-105.3, facing_reference="true")
+    cfg = Config(latitude=40.0, longitude=-105.3, facing_deg=296.0, facing_reference="true")
     assert true_facing_deg(cfg, WHEN) == 296.0
 
 
 def test_magnetic_adds_declination():
-    cfg = Config(latitude=40.0, longitude=-105.3)
+    cfg = Config(latitude=40.0, longitude=-105.3, facing_deg=296.0)
     assert true_facing_deg(cfg, WHEN) == pytest.approx(296.0 + declination_deg(40.0, -105.3, WHEN))
 
 
