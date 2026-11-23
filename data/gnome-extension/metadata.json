@@ -1,0 +1,7 @@
+{
+  "uuid": "skywall@local",
+  "name": "Skywall desktop menu",
+  "description": "Adds 'Open sky in Stellarium' and 'Skywall settings' to the desktop right-click menu.",
+  "shell-version": ["43", "44"],
+  "version": 1
+}

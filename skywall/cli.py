@@ -19,6 +19,7 @@ from .render import render_sky
 from .runner import run
 from .sky import compute_scene
 from . import scheduler
+from .extension import enable_extension, install_extension
 from .keybinding import add_custom_keybinding
 from .stellarium import open_in_stellarium
 from .wallpaper import next_wallpaper_path, restore, save_current, set_wallpaper
@@ -177,6 +178,8 @@ def cmd_install(args) -> int:
     apps.mkdir(parents=True, exist_ok=True)
     (apps / "skywall.desktop").write_text(template.read_text().replace("@BIN@", exe))
     add_custom_keybinding("Skywall: open in Stellarium", f"{exe} open", "<Super><Alt>s", RUNNER)
+    install_extension(bin_path=exe)
+    enable_extension(RUNNER)
     return 0
 
 

@@ -1,0 +1,56 @@
+/* Skywall: adds "Open sky in Stellarium" and "Skywall settings…" to the desktop
+ * right-click menu. GNOME Shell 43/44 (legacy imports). */
+const Main = imports.ui.main;
+const BackgroundMenu = imports.ui.backgroundMenu;
+const PopupMenu = imports.ui.popupMenu;
+const Util = imports.misc.util;
+
+const SKYWALL = '@BIN@';
+
+let originalAdd = null;
+let added = [];
+
+function addItems(menu) {
+    if (!menu || menu._skywallItems)
+        return;
+    const open = menu.addAction('Open sky in Stellarium', () => Util.spawn([SKYWALL, 'open']));
+    const settings = menu.addAction('Skywall settings…', () => Util.spawn([SKYWALL, 'settings']));
+    const sep = new PopupMenu.PopupSeparatorMenuItem();
+    menu.addMenuItem(sep);
+    menu.moveMenuItem(open, 0);
+    menu.moveMenuItem(settings, 1);
+    menu.moveMenuItem(sep, 2);
+    menu._skywallItems = [open, settings, sep];
+    added.push(menu);
+}
+
+function existingMenus() {
+    return (Main.layoutManager._bgManagers || [])
+        .map(m => m.backgroundActor && m.backgroundActor._backgroundMenu)
+        .filter(m => m);
+}
+
+function init() {}
+
+function enable() {
+    originalAdd = BackgroundMenu.addBackgroundMenu;
+    BackgroundMenu.addBackgroundMenu = function (actor, layoutManager) {
+        originalAdd(actor, layoutManager);
+        addItems(actor._backgroundMenu);
+    };
+    existingMenus().forEach(addItems);
+}
+
+function disable() {
+    if (originalAdd) {
+        BackgroundMenu.addBackgroundMenu = originalAdd;
+        originalAdd = null;
+    }
+    for (const menu of added) {
+        if (menu._skywallItems) {
+            menu._skywallItems.forEach(item => item.destroy());
+            delete menu._skywallItems;
+        }
+    }
+    added = [];
+}
