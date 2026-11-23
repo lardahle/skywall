@@ -8,14 +8,16 @@ from pathlib import Path
 
 from . import config as config_mod
 from .catalog import DataUnavailable, ensure_data, load_constellations, load_stars
-from .config import Config, load_config
+from .config import Config, load_config, save_config
 from .geomag import true_facing_deg
 from .projection import StereographicProjection
 from .render import render_sky
 from .runner import run
 from .sky import compute_scene
-from .wallpaper import next_wallpaper_path, set_wallpaper
+from . import scheduler
+from .wallpaper import next_wallpaper_path, restore, save_current, set_wallpaper
 
+RUNNER = run  # replaced in tests
 NO_LOCATION = "skywall: location not set — run `skywall settings`"
 
 
@@ -44,7 +46,7 @@ def render_to(cfg: Config, out: Path, data: Path) -> None:
     os.replace(tmp, out)
 
 
-def cmd_render(args, runner=run) -> int:
+def cmd_render(args) -> int:
     cfg = load_config(config_path())
     if not _has_location(cfg):
         print(NO_LOCATION, file=sys.stderr)
@@ -57,7 +59,45 @@ def cmd_render(args, runner=run) -> int:
         print(f"skywall: star data unavailable: {e}", file=sys.stderr)
         return 3
     if not args.output:
-        set_wallpaper(out, runner)
+        set_wallpaper(out, RUNNER)
+    return 0
+
+
+def cmd_enable(args) -> int:
+    path = config_path()
+    cfg = load_config(path)
+    if not _has_location(cfg):
+        print(NO_LOCATION, file=sys.stderr)
+        return 2
+    save_current(cfg, data_dir() / "wallpaper", RUNNER)
+    cfg.live_wallpaper = True
+    save_config(cfg, path)
+    scheduler.start(RUNNER)
+    return cmd_render(argparse.Namespace(output=None))
+
+
+def cmd_disable(args) -> int:
+    path = config_path()
+    cfg = load_config(path)
+    scheduler.stop(RUNNER)
+    scheduler.set_autostart(False, RUNNER)
+    restore(cfg, RUNNER)
+    cfg.live_wallpaper = False
+    cfg.autostart = False
+    save_config(cfg, path)
+    return 0
+
+
+def cmd_autostart(args) -> int:
+    path = config_path()
+    cfg = load_config(path)
+    on = args.state == "on"
+    if on and not cfg.live_wallpaper:
+        print("skywall: turn on the live wallpaper first (`skywall enable`)", file=sys.stderr)
+        return 1
+    scheduler.set_autostart(on, RUNNER)
+    cfg.autostart = on
+    save_config(cfg, path)
     return 0
 
 
@@ -67,6 +107,11 @@ def build_parser() -> argparse.ArgumentParser:
     r = sub.add_parser("render", help="render the sky and set it as the wallpaper")
     r.add_argument("--output", help="write the PNG here instead of setting the wallpaper")
     r.set_defaults(func=cmd_render)
+    sub.add_parser("enable", help="turn the live sky wallpaper on").set_defaults(func=cmd_enable)
+    sub.add_parser("disable", help="turn it off and restore the previous wallpaper").set_defaults(func=cmd_disable)
+    a = sub.add_parser("autostart", help="start with the GNOME session")
+    a.add_argument("state", choices=["on", "off"])
+    a.set_defaults(func=cmd_autostart)
     return p
 
 
