@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Skywall
+Comment=Live star-chart wallpaper of the sky your monitor faces
+Exec=@BIN@ settings
+Icon=weather-clear-night-symbolic
+Categories=Education;Science;Astronomy;
+Actions=open-stellarium;
+
+[Desktop Action open-stellarium]
+Name=Open in Stellarium
+Exec=@BIN@ open

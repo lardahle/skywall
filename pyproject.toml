@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skywall"
+version = "0.1.0"
+description = "Live star-chart wallpaper of the sky your monitor faces"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+readme = "README.md"
+dependencies = ["skyfield", "numpy", "pygeomag", "tomli-w"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+skywall = "skywall.cli:main"
+
+[tool.setuptools]
+packages = ["skywall"]
+
+[tool.pytest.ini_options]
+markers = ["network: needs downloaded catalogue/ephemeris data"]

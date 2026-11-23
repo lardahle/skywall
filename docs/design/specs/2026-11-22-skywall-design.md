@@ -1,5 +1,7 @@
 # Skywall — design
 
+> Historical design note from the first build (2026-11-22). Later additions: perspective projection (now the default), star names and Greek-letter labels, deeper catalogue (mag 7), right-click shell extension, and the HYG catalogue replacing CDS Hipparcos.
+
 *2026-11-22 · status: draft for approval*
 
 ## Intent
@@ -8,7 +10,7 @@ A GNOME wallpaper that shows the patch of sky the monitor is physically facing, 
 
 The wallpaper is the ambient layer. When something on it catches the user's interest, one action opens **Stellarium** aimed at exactly the same view, for zooming in and exploring. Skywall itself never tries to be an interactive planetarium.
 
-Why: the user wants a desktop that quietly reflects where they actually are in space, with a path to dig deeper when curious. They tried Caelum (too weather/photoreal-focused, and it pegged Xorg at ~100% CPU by redrawing a full-screen Cairo window 10×/s) and Stellarium (loved it, but it's an app, not a wallpaper).
+Why: the user wants a desktop that quietly reflects where they actually are in space, with a path to dig deeper when curious. They tried Caelum (a fine photoreal weather-and-sky app, but a different goal, and its full-screen 10 fps redraw is costly on X11) and Stellarium (loved it, but it's an app, not a wallpaper).
 
 ## Goals
 
@@ -30,7 +32,7 @@ Why: the user wants a desktop that quietly reflects where they actually are in s
 
 ## Anti-goals (a failure even if it technically works)
 
-- Anything that redraws continuously or keeps a process busy between renders. The Caelum experience is the thing to avoid.
+- Anything that redraws continuously or keeps a process busy between renders. Rendering once a minute and exiting is the whole point.
 - Fake sky: no randomly placed decorative stars or a painted-on Milky Way. Everything drawn is at its real position.
 - Leaving the user's desktop in a broken state: turning the live wallpaper off restores the wallpaper they had before.
 - Sending location anywhere. Everything is computed locally. The only network use is the one-time download of the star catalogue and ephemeris.
@@ -42,7 +44,7 @@ Why: the user wants a desktop that quietly reflects where they actually are in s
 - System `/usr/bin/python3` is 3.11 and has PyGObject + pycairo. The user's default `python3` is pyenv 3.12 without them. Use a venv created from `/usr/bin/python3 --system-site-packages`.
 - The wallpaper is set via `gsettings org.gnome.desktop.background picture-uri` (and `picture-uri-dark`). GNOME only reloads when the URI changes.
 - Stellarium 26.3 is installed as the Flatpak `org.stellarium.Stellarium` (user install). Its user data dir is `~/.stellarium/` (scripts go in `~/.stellarium/scripts/`).
-- The monitor faces **296° magnetic** (confirmed by the user: Pixel 9 compass, magnetic north), so ≈303–304° true. See "Facing" below.
+- The facing direction is a phone-compass reading taken behind the monitor (usually magnetic). See "Facing" below.
 
 ## Approaches considered
 
@@ -69,7 +71,7 @@ Why: the user wants a desktop that quietly reflects where they actually are in s
 
 ### Facing, tilt, projection
 
-- **Facing**: the config stores the user's compass reading and whether it's magnetic or true. If magnetic, Skywall corrects it to true north using the World Magnetic Model for the configured location (a WMM library, e.g. `pygeomag`). At the user's location magnetic declination is roughly +7–8° east, so **296° magnetic ≈ 303–304° true**, a difference of about one constellation width. Settings shows both values.
+- **Facing**: the config stores the user's compass reading and whether it's magnetic or true. If magnetic, Skywall corrects it to true north using the World Magnetic Model for the configured location (a WMM library, e.g. `pygeomag`). Declination is often several degrees (e.g. about +8° east in the US Southwest), roughly one constellation width. Settings shows both values.
 - **Tilt**: the altitude at the centre of the screen. Default **0°** (the monitor is upright at eye level), so the horizon runs through the middle of the screen and the lower half is see-through sky. Range −90…+90.
 - **FOV**: horizontal degrees across the 3440 px width; vertical follows from the aspect ratio. Default **60°** (2·atan(39.85 cm / 70 cm) ≈ 59°). Slider range 20°–180°.
 - **Projection**: **stereographic**, centred on (facing, tilt). It keeps constellation shapes undistorted even at wide FOVs on an ultrawide. *(My call; gnomonic/perspective is the alternative and could be a setting later.)*
