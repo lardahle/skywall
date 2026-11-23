@@ -15,6 +15,8 @@ from .render import render_sky
 from .runner import run
 from .sky import compute_scene
 from . import scheduler
+from .keybinding import add_custom_keybinding
+from .stellarium import open_in_stellarium
 from .wallpaper import next_wallpaper_path, restore, save_current, set_wallpaper
 
 RUNNER = run  # replaced in tests
@@ -101,6 +103,35 @@ def cmd_autostart(args) -> int:
     return 0
 
 
+def _bin() -> str:
+    return str(Path(sys.executable).parent / "skywall")
+
+
+def cmd_open(args) -> int:
+    cfg = load_config(config_path())
+    if not _has_location(cfg):
+        print(NO_LOCATION, file=sys.stderr)
+        return 2
+    open_in_stellarium(cfg, true_facing_deg(cfg, datetime.now(timezone.utc)), runner=RUNNER)
+    return 0
+
+
+def cmd_install(args) -> int:
+    exe = _bin()
+    scheduler.install_units(scheduler.UNIT_DIR, exe, RUNNER)
+    template = Path(__file__).resolve().parent.parent / "data" / "skywall.desktop.in"
+    apps = Path.home() / ".local" / "share" / "applications"
+    apps.mkdir(parents=True, exist_ok=True)
+    (apps / "skywall.desktop").write_text(template.read_text().replace("@BIN@", exe))
+    add_custom_keybinding("Skywall: open in Stellarium", f"{exe} open", "<Super><Alt>s", RUNNER)
+    return 0
+
+
+def cmd_settings(args) -> int:
+    from .settings_app import run_settings
+    return run_settings()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="skywall")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -112,6 +143,9 @@ def build_parser() -> argparse.ArgumentParser:
     a = sub.add_parser("autostart", help="start with the GNOME session")
     a.add_argument("state", choices=["on", "off"])
     a.set_defaults(func=cmd_autostart)
+    sub.add_parser("open", help="open Stellarium aimed at the same view").set_defaults(func=cmd_open)
+    sub.add_parser("install", help="install timer, app entry and shortcut").set_defaults(func=cmd_install)
+    sub.add_parser("settings", help="open the settings window").set_defaults(func=cmd_settings)
     return p
 
 

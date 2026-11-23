@@ -34,3 +34,8 @@ def test_render_writes_png(env, monkeypatch, data):
     monkeypatch.setenv("SKYWALL_DATA", str(data))
     assert cli.main(["render", "--output", str(env / "o.png")]) == 0
     assert cairo.ImageSurface.create_from_png(str(env / "o.png")).get_width() == 3440
+
+
+def test_open_without_location_exits_2(env, capsys):
+    assert cli.main(["open"]) == 2
+    assert "location not set" in capsys.readouterr().err
