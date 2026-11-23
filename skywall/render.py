@@ -7,7 +7,9 @@ import numpy as np
 
 from .catalog import Constellation
 from .config import Config
-from .projection import StereographicProjection
+from .projection import PerspectiveProjection, StereographicProjection
+
+Projection = StereographicProjection | PerspectiveProjection
 from .sky import Body, SkyScene
 
 BACKGROUND = (0.012, 0.016, 0.04)
@@ -86,7 +88,7 @@ def _on_screen(x: float, y: float, w: int, h: int, margin: float = 0.0) -> bool:
     return -margin <= x <= w + margin and -margin <= y <= h + margin
 
 
-def _draw_tint(cr, proj: StereographicProjection, facing: float):
+def _draw_tint(cr, proj: Projection, facing: float):
     W, H = proj.width, proj.height
     span = min(179.0, proj.hfov / 2 + 40)
     az = np.arange(facing - span, facing + span + 0.01, 0.5)
@@ -105,7 +107,7 @@ def _draw_tint(cr, proj: StereographicProjection, facing: float):
     cr.fill()
 
 
-def _draw_horizon(cr, proj: StereographicProjection, facing: float, labels: _Labels):
+def _draw_horizon(cr, proj: Projection, facing: float, labels: _Labels):
     W, H = proj.width, proj.height
     span = min(179.0, proj.hfov / 2 + 40)
     az = np.arange(facing - span, facing + span + 0.01, 0.5)
@@ -163,7 +165,7 @@ def _draw_moon(cr, x: float, y: float, r: float, body: Body, sun_xy, rgb):
 
 
 def render_sky(scene: SkyScene, constellations: list[Constellation],
-               proj: StereographicProjection, cfg: Config) -> cairo.ImageSurface:
+               proj: Projection, cfg: Config) -> cairo.ImageSurface:
     W, H = proj.width, proj.height
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, W, H)
     cr = cairo.Context(surface)

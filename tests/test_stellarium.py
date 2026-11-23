@@ -28,3 +28,9 @@ def test_script_contents():
     assert "setFlagLandscape(false)" in s and "setFlagAtmosphere(false)" in s
     assert 'core.moveToAltAzi("0", "303.5", 0)' in s
     assert "core.setObserverLocation(0.0, 51.48, 0.0, 0" in s  # longitude first
+
+
+def test_perspective_script_and_fov():
+    s = build_script(51.48, 0.0, 0.0, 303.5, 3.3, 20.0, projection="perspective")
+    assert 'setProjectionMode("ProjectionPerspective")' in s
+    assert stellarium_fov_deg(60.0, 3440, 1440, "perspective") == pytest.approx(27.0, abs=0.2)

@@ -25,6 +25,7 @@ class Config:
     facing_reference: str = "magnetic"
     tilt_deg: float = 0.0
     fov_deg: float = 60.0
+    projection: str = "perspective"  # perspective (true window) | stereographic (better for wide FOV)
     width: int = 3440
     height: int = 1440
     mag_limit: float = 6.5
@@ -42,6 +43,8 @@ def _normalise(cfg: Config) -> Config:
     cfg.fov_deg = float(min(180.0, max(20.0, cfg.fov_deg)))
     cfg.tilt_deg = float(min(90.0, max(-90.0, cfg.tilt_deg)))
     cfg.facing_deg = float(cfg.facing_deg) % 360.0
+    if cfg.projection not in ("perspective", "stereographic"):
+        cfg.projection = "perspective"
     if cfg.facing_reference not in ("magnetic", "true"):
         cfg.facing_reference = "magnetic"
     return cfg

@@ -22,3 +22,12 @@ def test_out_of_range_values_clamped(tmp_path):
     p.write_text('fov_deg = 500\ntilt_deg = -200\nfacing_deg = 365\nfacing_reference = "bogus"\nunknown = 1\n')
     cfg = load_config(p)
     assert (cfg.fov_deg, cfg.tilt_deg, cfg.facing_deg, cfg.facing_reference) == (180.0, -90.0, 5.0, "magnetic")
+
+
+def test_projection_setting(tmp_path):
+    p = tmp_path / "c.toml"
+    assert load_config(p).projection == "perspective"
+    p.write_text('projection = "fisheye"\n')
+    assert load_config(p).projection == "perspective"
+    p.write_text('projection = "stereographic"\n')
+    assert load_config(p).projection == "stereographic"

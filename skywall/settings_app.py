@@ -114,6 +114,15 @@ class SettingsWindow(Adw.PreferencesWindow):
         def on_tilt(v):
             self.cfg.tilt_deg = v
             self._changed()
+        proj = Adw.ComboRow(title="Projection", subtitle="Perspective is a true window; stereographic suits wide FOVs",
+                            model=Gtk.StringList.new(["Perspective", "Stereographic"]))
+        proj.set_selected(0 if self.cfg.projection == "perspective" else 1)
+
+        def on_proj(r, _p):
+            self.cfg.projection = "perspective" if r.get_selected() == 0 else "stereographic"
+            self._changed()
+        proj.connect("notify::selected", on_proj)
+        view.add(proj)
         view.add(self._spin_row("Tilt", -90, 90, self.cfg.tilt_deg, on_tilt,
                                 subtitle="Altitude at the centre of the screen"))
         page.add(view)

@@ -14,7 +14,7 @@ from . import config as config_mod
 from .catalog import DataUnavailable, ensure_data, load_constellations, load_stars
 from .config import Config, load_config, save_config
 from .geomag import true_facing_deg
-from .projection import StereographicProjection
+from .projection import make_projection
 from .render import render_sky
 from .runner import run
 from .sky import compute_scene
@@ -43,8 +43,8 @@ def render_to(cfg: Config, out: Path, data: Path) -> None:
     ensure_data(data, cfg.mag_limit)
     now = datetime.now(timezone.utc)
     scene = compute_scene(cfg.latitude, cfg.longitude, cfg.elevation_m, now, load_stars(data), data)
-    proj = StereographicProjection(true_facing_deg(cfg, now), cfg.tilt_deg, cfg.fov_deg,
-                                   cfg.width, cfg.height)
+    proj = make_projection(cfg.projection, true_facing_deg(cfg, now), cfg.tilt_deg, cfg.fov_deg,
+                           cfg.width, cfg.height)
     surface = render_sky(scene, load_constellations(data), proj, cfg)
     out.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=out.stem + ".", suffix=".tmp.png", dir=out.parent)
