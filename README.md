@@ -60,7 +60,7 @@ What's different from GNOME:
 
 - **Refresh** — a hidden Task Scheduler task (`Skywall`) runs `pythonw -m skywall.cli render` every minute, also on battery. It keeps running across sign-outs and reboots until `skywall disable`, so `autostart` does nothing here.
 - **Settings** — there's no GTK window on Windows; `skywall settings` opens the TOML file in Notepad.
-- **Stellarium hand-off** — Start menu → *Skywall - Open in Stellarium*, hotkey <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd>, or right-click the desktop → *Show more options* → *Open sky in Stellarium*.
+- **Stellarium hand-off** — <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> (held by `skywall hotkey`, a tiny idle listener started from your Startup folder), Start menu → *Skywall - Open in Stellarium*, or right-click the desktop → *Show more options* (or <kbd>Shift</kbd>+right-click) → *Open sky in Stellarium*. Windows 11's compact menu only lists packaged apps, so the entry lives in the full menu.
 - **Size** — set `width`/`height` to the panel's physical pixels (e.g. 3840×2160 for a 4K panel at 150% scaling).
 - **Paths** — config in `%APPDATA%\skywall\config.toml`, data and images in `%LOCALAPPDATA%\skywall\`.
 - Turning it off restores your previous picture. If that was Windows Spotlight, you'll get the last Spotlight image back as a static picture. Switch Spotlight back on in Settings → Personalization → Background.

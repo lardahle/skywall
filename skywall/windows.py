@@ -2,7 +2,8 @@
 
 - wallpaper   SystemParametersInfoW + HKCU\\Control Panel\\Desktop (instead of gsettings)
 - scheduler   a Task Scheduler task that runs every minute (instead of a systemd user timer)
-- shortcut    Start-menu entries, one with a Ctrl+Alt+S hotkey (instead of a GNOME keybinding)
+- shortcut    Start-menu entries, plus a tiny Win+Alt+S listener started at sign-in
+              (instead of a GNOME keybinding; .lnk hotkeys can't use the Windows key)
 - right-click a desktop-background context-menu verb in HKCU (instead of a GNOME Shell extension)
 """
 
@@ -25,7 +26,6 @@ SPI_GETDESKWALLPAPER = 0x0073
 SPIF_UPDATE_AND_BROADCAST = 0x01 | 0x02
 CONTEXT_KEY = r"Software\Classes\DesktopBackground\Shell\Skywall"
 START_MENU = Path(os.environ.get("APPDATA", Path.home())) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
-HOTKEY = "CTRL+ALT+S"
 
 
 def pythonw() -> str:
@@ -205,7 +205,7 @@ def install_shortcuts(start_menu: Path = START_MENU) -> None:
     start_menu.mkdir(parents=True, exist_ok=True)
     _shortcut(start_menu / "Skywall.lnk", skywall_command("settings"), "Skywall settings")
     _shortcut(start_menu / "Skywall - Open in Stellarium.lnk", skywall_command("open"),
-              "Open Stellarium aimed at the wallpaper's view", HOTKEY)
+              "Open Stellarium aimed at the wallpaper's view")
 
 
 def install_context_menu() -> None:
@@ -216,6 +216,42 @@ def install_context_menu() -> None:
         winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, r"%SystemRoot%\System32\imageres.dll,-1023")
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CONTEXT_KEY + r"\command") as k:
         winreg.SetValueEx(k, "", 0, winreg.REG_SZ, subprocess.list2cmdline(skywall_command("open")))
+
+
+STARTUP = START_MENU / "Startup"
+HOTKEY_LNK = "Skywall hotkey.lnk"
+MOD_ALT, MOD_WIN, MOD_NOREPEAT, VK_S, WM_HOTKEY = 0x0001, 0x0008, 0x4000, 0x53, 0x0312
+
+
+def hotkey_loop(on_press) -> int:
+    """Hold Win+Alt+S for this session and call `on_press` each time (the GNOME shortcut's twin).
+
+    Returns 1 at once if the combination is taken, e.g. by an already-running listener.
+    """
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.windll.user32
+    if not user32.RegisterHotKey(None, 1, MOD_WIN | MOD_ALT | MOD_NOREPEAT, VK_S):
+        return 1
+    msg = wintypes.MSG()
+    try:
+        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            if msg.message == WM_HOTKEY:
+                try:
+                    on_press()
+                except Exception as e:  # keep listening whatever one press does
+                    print(f"skywall: {e}", file=sys.stderr)
+    finally:
+        user32.UnregisterHotKey(None, 1)
+    return 0
+
+
+def install_hotkey(startup: Path = STARTUP) -> None:
+    """Start the Win+Alt+S listener now and at every sign-in."""
+    startup.mkdir(parents=True, exist_ok=True)
+    _shortcut(startup / HOTKEY_LNK, skywall_command("hotkey"), "Skywall: Win+Alt+S opens Stellarium")
+    subprocess.Popen(skywall_command("hotkey"), creationflags=subprocess.DETACHED_PROCESS,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
 
 
 def notify(message: str) -> None:

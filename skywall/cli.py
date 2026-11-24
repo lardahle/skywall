@@ -221,6 +221,7 @@ def cmd_install(args) -> int:
         windows.install_task(enabled=load_config(config_path()).live_wallpaper, runner=RUNNER)
         windows.install_shortcuts()
         windows.install_context_menu()
+        windows.install_hotkey()
         return 0
     exe = _bin()
     scheduler.install_units(scheduler.UNIT_DIR, exe, RUNNER)
@@ -232,6 +233,15 @@ def cmd_install(args) -> int:
     install_extension(bin_path=exe)
     enable_extension(RUNNER)
     return 0
+
+
+def cmd_hotkey(args) -> int:
+    """Windows only: listen for Win+Alt+S and open Stellarium (GNOME binds the key itself)."""
+    if not IS_WINDOWS:
+        print("skywall: hotkey is Windows-only; GNOME uses a custom keybinding", file=sys.stderr)
+        return 1
+    from .windows import hotkey_loop
+    return hotkey_loop(lambda: cmd_open(args))
 
 
 def cmd_settings(args) -> int:
@@ -259,6 +269,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("open", help="open Stellarium aimed at the same view").set_defaults(func=cmd_open)
     sub.add_parser("install", help="install timer, app entry and shortcut").set_defaults(func=cmd_install)
     sub.add_parser("settings", help="open the settings window").set_defaults(func=cmd_settings)
+    sub.add_parser("hotkey", help="(Windows) listen for Win+Alt+S").set_defaults(func=cmd_hotkey)
     return p
 
 
