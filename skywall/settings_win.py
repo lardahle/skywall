@@ -414,10 +414,16 @@ class SettingsWindow:
 
 
 def run_settings() -> int:
+    import ctypes
+    from .windows import APP_ICON, APP_ID
     _dpi_aware()
+    try:  # its own taskbar button (and icon) instead of grouping under pythonw
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+    except (AttributeError, OSError):
+        pass
     root = tk.Tk()
     try:
-        root.iconbitmap(default=sys.executable)  # Python's icon rather than Tk's feather
+        root.iconbitmap(default=str(APP_ICON))
     except tk.TclError:
         pass
     SettingsWindow(root)

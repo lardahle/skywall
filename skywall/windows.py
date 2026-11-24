@@ -19,6 +19,8 @@ from .config import Config
 from .runner import Runner, run
 
 TASK_NAME = "Skywall"
+APP_ICON = Path(__file__).resolve().parent.parent / "data" / "icons" / "skywall.ico"  # tools/make_icon.py
+APP_ID = "Skywall.Settings"  # taskbar identity, so the window gets Skywall's icon, not Python's
 DESKTOP_KEY = r"Control Panel\Desktop"
 STYLE_FILL = "10"
 SPI_SETDESKWALLPAPER = 0x0014
@@ -90,6 +92,27 @@ def restore(cfg: Config, runner: Runner = run) -> None:
     # An empty path means "no picture" (solid colour) — SPI accepts that as-is.
     _apply_wallpaper(saved.get("path", ""), saved.get("style", STYLE_FILL), saved.get("tile", "0"))
     cfg.saved_wallpaper = {}
+
+
+def taskbar_insets() -> tuple[float, float, float, float]:
+    """Fractions of the primary screen the taskbar covers (left, top, right, bottom).
+
+    Work area vs. full screen, both in the same (possibly DPI-virtualised) units, so the
+    ratio is right at any scaling, on any taskbar edge, and 0 when the taskbar auto-hides.
+    """
+    import ctypes
+    from ctypes import wintypes
+    try:
+        work = wintypes.RECT()
+        if not ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0):  # SPI_GETWORKAREA
+            return (0.0, 0.0, 0.0, 0.0)
+        sw, sh = ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1)
+        if sw <= 0 or sh <= 0:
+            return (0.0, 0.0, 0.0, 0.0)
+        return (max(0, work.left) / sw, max(0, work.top) / sh,
+                max(0, sw - work.right) / sw, max(0, sh - work.bottom) / sh)
+    except (AttributeError, OSError):
+        return (0.0, 0.0, 0.0, 0.0)
 
 
 # --- scheduler ---------------------------------------------------------------------------
@@ -191,12 +214,12 @@ def _shortcut(lnk: Path, command: list[str], description: str, hotkey: str = "")
         "$s.TargetPath = $env:SW_EXE",
         "$s.Arguments = $env:SW_ARGS",
         "$s.Description = $env:SW_DESC",
-        "$s.IconLocation = \"$env:SystemRoot\\System32\\imageres.dll,-1023\"",
+        "$s.IconLocation = \"$env:SW_ICON,0\"",
         "if ($env:SW_HOTKEY) { $s.Hotkey = $env:SW_HOTKEY }",
         "$s.Save()",
     ])
     env = dict(os.environ, SW_LNK=str(lnk), SW_EXE=exe, SW_ARGS=subprocess.list2cmdline(args),
-               SW_DESC=description, SW_HOTKEY=hotkey)
+               SW_DESC=description, SW_HOTKEY=hotkey, SW_ICON=str(APP_ICON))
     subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
                    check=True, capture_output=True, env=env)
 
@@ -208,14 +231,38 @@ def install_shortcuts(start_menu: Path = START_MENU) -> None:
               "Open Stellarium aimed at the wallpaper's view")
 
 
-def install_context_menu() -> None:
-    """Desktop right-click → 'Open sky in Stellarium' (under 'Show more options' on Windows 11)."""
+CONTEXT_ITEMS = (("1open", "Open sky in Stellarium", "open"), ("2settings", "Settings", "settings"))
+
+
+def _delete_tree(root, path: str) -> None:
     import winreg
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CONTEXT_KEY) as k:
-        winreg.SetValueEx(k, "", 0, winreg.REG_SZ, "Open sky in Stellarium")
-        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, r"%SystemRoot%\System32\imageres.dll,-1023")
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CONTEXT_KEY + r"\command") as k:
-        winreg.SetValueEx(k, "", 0, winreg.REG_SZ, subprocess.list2cmdline(skywall_command("open")))
+    try:
+        with winreg.OpenKey(root, path) as k:
+            while True:
+                try:
+                    child = winreg.EnumKey(k, 0)
+                except OSError:
+                    break
+                _delete_tree(root, f"{path}\\{child}")
+        winreg.DeleteKey(root, path)
+    except FileNotFoundError:
+        pass
+
+
+def install_context_menu() -> None:
+    """Desktop right-click → Skywall ▸ Open sky in Stellarium / Settings (Windows 11: 'Show more options')."""
+    import winreg
+    hk = winreg.HKEY_CURRENT_USER
+    _delete_tree(hk, CONTEXT_KEY)  # replaces older single-verb installs cleanly
+    with winreg.CreateKey(hk, CONTEXT_KEY) as k:
+        winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, "Skywall")
+        winreg.SetValueEx(k, "SubCommands", 0, winreg.REG_SZ, "")  # cascade from the shell\ subkeys
+        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, f"{APP_ICON},0")
+    for key, label, cmd in CONTEXT_ITEMS:  # subkey names sort the items
+        with winreg.CreateKey(hk, rf"{CONTEXT_KEY}\shell\{key}") as k:
+            winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, label)
+        with winreg.CreateKey(hk, rf"{CONTEXT_KEY}\shell\{key}\command") as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, subprocess.list2cmdline(skywall_command(cmd)))
 
 
 STARTUP = START_MENU / "Startup"

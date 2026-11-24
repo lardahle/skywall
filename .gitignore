@@ -4,3 +4,4 @@ __pycache__/
 *.png
 *.egg-info/
 !docs/screenshot.png
+!data/icons/*.png

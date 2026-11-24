@@ -53,6 +53,14 @@ def _scheduler():
     return scheduler
 
 
+def _screen_insets() -> tuple[float, float, float, float]:
+    """Edges hidden by the taskbar (Windows). GNOME's panels don't cover the bottom-right corner."""
+    if IS_WINDOWS:
+        from .windows import taskbar_insets
+        return taskbar_insets()
+    return (0.0, 0.0, 0.0, 0.0)
+
+
 def _has_location(cfg: Config) -> bool:
     return cfg.latitude is not None and cfg.longitude is not None
 
@@ -63,7 +71,7 @@ def render_to(cfg: Config, out: Path, data: Path) -> None:
     scene = compute_scene(cfg.latitude, cfg.longitude, cfg.elevation_m, now, load_stars(data, cfg.mag_limit), data)
     proj = make_projection(cfg.projection, true_facing_deg(cfg, now), cfg.tilt_deg, cfg.fov_deg,
                            cfg.width, cfg.height)
-    surface = render_sky(scene, load_constellations(data), proj, cfg)
+    surface = render_sky(scene, load_constellations(data), proj, cfg, _screen_insets())
     out.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=out.stem + ".", suffix=".tmp.png", dir=out.parent)
     os.close(fd)

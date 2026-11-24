@@ -168,14 +168,52 @@ def _draw_moon(cr, x: float, y: float, r: float, body: Body, sun_xy, rgb):
     cr.restore()
 
 
+TIMESTAMP_RGBA = (0.70, 0.72, 0.82, 0.75)
+
+
+Insets = tuple[float, float, float, float]  # left, top, right, bottom — fractions of the screen
+NO_INSETS: Insets = (0.0, 0.0, 0.0, 0.0)
+
+
+def _timestamp_layout(cr, text: str, W: int, H: int, insets: Insets = NO_INSETS) -> tuple[float, float, float]:
+    """Bottom-right of the visible desktop: inside any taskbar/panel `insets`, plus a margin."""
+    size = max(14.0, H / 90)
+    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(size)
+    w = cr.text_extents(text).x_advance
+    margin = max(16.0, H * 0.015)
+    _left, _top, right, bottom = insets
+    return W * (1 - right) - margin - w, H * (1 - bottom) - margin, size
+
+
+def _reserve_timestamp(labels, scene: SkyScene, W: int, H: int, insets: Insets = NO_INSETS):
+    """Claim the timestamp's spot before any other label, so star names can't displace it."""
+    text = f"updated {scene.when.astimezone():%H:%M}"
+    x, y, size = _timestamp_layout(labels.cr, text, W, H, insets)
+    w = labels.cr.text_extents(text).x_advance
+    labels.boxes.append((x - 3, y - size - 2, x + w + 3, y + 4))
+    return text, x, y, size
+
+
+def _draw_timestamp(cr, text: str, x: float, y: float, size: float) -> None:
+    """Drawn last, on top of lines and stars."""
+    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(size)
+    cr.set_source_rgba(*TIMESTAMP_RGBA)
+    cr.move_to(x, y)
+    cr.show_text(text)
+
+
 def render_sky(scene: SkyScene, constellations: list[Constellation],
-               proj: Projection, cfg: Config) -> cairo.ImageSurface:
+               proj: Projection, cfg: Config, insets: Insets = NO_INSETS) -> cairo.ImageSurface:
+    """`insets`: screen edges covered by a taskbar/panel, as fractions, so overlays stay visible."""
     W, H = proj.width, proj.height
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, W, H)
     cr = cairo.Context(surface)
     cr.set_source_rgb(*BACKGROUND)
     cr.paint()
     labels = _Labels(cr)
+    stamp = _reserve_timestamp(labels, scene, W, H, insets) if cfg.show_timestamp else None
     facing = proj.center_az
 
     _draw_tint(cr, proj, facing)
@@ -277,9 +315,8 @@ def render_sky(scene: SkyScene, constellations: list[Constellation],
     if cfg.show_horizon:
         _draw_horizon(cr, proj, facing, labels)
 
-    if cfg.show_timestamp:
-        local = scene.when.astimezone()
-        labels.place(f"updated {local:%H:%M}", W - 140, H - 20, 12, (0.6, 0.6, 0.7, 0.5))
+    if stamp:
+        _draw_timestamp(cr, *stamp)
 
     surface.flush()
     return surface

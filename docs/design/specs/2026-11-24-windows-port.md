@@ -23,7 +23,8 @@ Rendering (`sky`, `projection`, `render`, `catalog`, `geomag`) was already platf
 | Start at login | `systemctl --user enable` | not needed | An enabled task survives sign-out and reboot. `set_autostart` is a no-op. |
 | Render lock | `fcntl.flock` | `msvcrt.locking` on byte 0, polled for blocking mode | The same lock file and semantics. Non-blocking mode raises `BlockingIOError` on both. |
 | Hotkey | GNOME custom keybinding | `skywall hotkey`: `RegisterHotKey(MOD_WIN\|MOD_ALT, 'S')` message loop, started from the Startup folder | `.lnk` hotkeys can't use the Windows key and only register after Explorer rescans. A second listener fails `RegisterHotKey` and exits, so it is single-instance for free. |
-| Right-click | GNOME Shell extension | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` | Per-user, no admin. On Windows 11 it appears under *Show more options*. The compact menu needs a signed sparse package with an `IExplorerCommand` handler, which isn't worth it for one entry. |
+| Right-click | GNOME Shell extension | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` | A cascading *Skywall* verb (`MUIVerb` + `SubCommands` with `shell\` children) holding *Open sky in Stellarium* and *Settings*. Per-user, no admin. On Windows 11 it appears under *Show more options*. The compact menu needs a signed sparse package with an `IExplorerCommand` handler, which isn't worth it for two items. |
+| Timestamp | bottom-right, margin only | bottom-right of the work area (`SPI_GETWORKAREA` vs. screen size, as fractions) | The old fixed 20 px offset sat under the taskbar. Fractions work at any DPI scaling, on any taskbar edge, and with auto-hide. The spot is reserved before star labels are placed and drawn last, so it is never displaced or painted over. Size scales with height (H/90). |
 | App entry | `.desktop` file | Start-menu `.lnk` files via `WScript.Shell` | No extra dependencies. |
 | Settings UI | GTK 4 / libadwaita | Tkinter + sv-ttk (Sun Valley theme), DPI-aware | Tk ships with python.org Python. GTK on Windows means MSYS2. sv-ttk is about 200 KB of pure Python and Tcl and matches Windows 11. |
 | Light / dark | `Adw.StyleManager.set_color_scheme` | `sv_ttk.set_theme` + `DwmSetWindowAttribute(DWMWA_USE_IMMERSIVE_DARK_MODE)` | An `appearance` setting (`system`/`light`/`dark`) in `config.toml`. *System* reads `AppsUseLightTheme`. The GNOME window applies the same setting through `Adw.StyleManager`; *System* there follows the desktop. |
@@ -39,11 +40,11 @@ Rendering (`sky`, `projection`, `render`, `catalog`, `geomag`) was already platf
   - a 3840×2160 render takes about 0.7 s from start to finish, including Python start-up, once the data is cached;
   - the task's first run returned 0 and switched the wallpaper;
   - <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> opens Stellarium.
+- Virtual desktops (Windows 11): checked with *Last-updated time*. The desktop you're on refreshes every minute, because `SPI_SETDESKWALLPAPER` applies to the active desktop. Desktops you aren't viewing may hold an older image until you switch to them; that's acceptable, since only the visible one matters.
 - `disable` restoring the previous wallpaper is covered only by the stubbed test so far.
 
 ## Open
 
 - Confirm the GNOME path still works on the Debian 12 machine before merging.
 - *Match Windows* is read when the window opens. Live switching on a system theme change (`WM_SETTINGCHANGE`) isn't wired up.
-- Check that multiple virtual desktops each get the live wallpaper. *Last-updated time* makes this easy to see.
 - Per-monitor wallpapers through `IDesktopWallpaper`. Multi-monitor is out of scope for v0.1 on both platforms.
