@@ -24,7 +24,7 @@ Think [Sky Map](https://github.com/sky-map-team/stardroid), but for a desktop th
 | | Linux (GNOME) | Windows 10/11 |
 | --- | --- | --- |
 | Desktop | GNOME (tested on GNOME 43 / X11, Debian 12) | Windows 10 or 11 (tested on 11) |
-| Python | System **Python ≥ 3.11 with PyGObject, pycairo, GTK 4 and libadwaita ≥ 1.2** — Debian/Ubuntu: `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1` | **Python ≥ 3.11** from [python.org](https://www.python.org/downloads/windows/) (tested on 3.14); pycairo installs from a wheel |
+| Python | System **Python ≥ 3.11 with PyGObject, pycairo, GTK 4 and libadwaita ≥ 1.2** — Debian/Ubuntu: `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1` | **Python ≥ 3.11** from [python.org](https://www.python.org/downloads/windows/) with Tcl/Tk (on by default; tested on 3.14). pycairo and sv-ttk install from wheels |
 | Stellarium | Recommended, as a Flatpak: `flatpak install flathub org.stellarium.Stellarium` | Recommended: `winget install Stellarium.Stellarium` |
 
 Stellarium is used for the interactive view, and Skywall reads its constellation lines once from a local install. Without one, the same lines are downloaded once from a pinned Stellarium release.
@@ -46,6 +46,8 @@ Then open **Skywall** from the app grid:
 2. **Monitor direction** — see [Finding your monitor's direction](#finding-your-monitors-direction).
 3. **System → Live sky as wallpaper** — on. Optionally *Start with GNOME session*.
 
+*System → Appearance* switches the settings window between following the system, Light and Dark.
+
 ## Install on Windows
 
 In PowerShell:
@@ -64,29 +66,15 @@ If PowerShell refuses to run the script, allow local scripts for your account on
 - starts the <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> listener and puts it in your Startup folder;
 - adds **Open sky in Stellarium** to the desktop's right-click menu.
 
-There is no settings window on Windows. Configure Skywall by editing its config file:
+Then open **Skywall** from the Start menu (or run `.\.venv\Scripts\skywall settings`). It has the same three tabs as the GNOME window:
 
-```powershell
-.\.venv\Scripts\skywall settings     # opens %APPDATA%\skywall\config.toml in Notepad
-```
+1. **Location** — latitude, longitude (west is negative) and elevation, then the monitor's facing and whether that reading is *Magnetic* or *True north*.
+2. **System → Image size** — click **Use this screen** to fill in the panel's physical pixels.
+3. **System → Live sky as wallpaper** — on.
 
-Set at least these keys (the full list is in [Configuration](#configuration)), save, then turn it on:
+Changes save as you make them, and while the live wallpaper is on the desktop re-renders about half a second after each one. *System → Appearance* switches the window between matching Windows, Light and Dark.
 
-```toml
-latitude = 37.108333          # decimal degrees, north positive
-longitude = -113.583611       # decimal degrees, east positive (west is negative)
-elevation_m = 834.8
-facing_deg = 289.0            # compass bearing the screen faces
-facing_reference = "true"     # or "magnetic", to match your compass app
-width = 3840                  # the panel's physical pixels, not the scaled size
-height = 2160
-```
-
-```powershell
-.\.venv\Scripts\skywall enable
-```
-
-The wallpaper changes straight away and then every minute. Changes to `config.toml` take effect at the next refresh.
+You can also edit `%APPDATA%\skywall\config.toml` directly (*System → Edit config file*). Edits made there show up at the next minute's refresh.
 
 **Size on scaled displays.** Windows reports scaled sizes in many places. A 4K panel at 150% shows as 2560×1440, but the wallpaper should be rendered at 3840×2160. *Settings → System → Display → Display resolution* shows the real size.
 
@@ -119,14 +107,14 @@ Hold a phone flat against the back of the monitor and read its compass. That bea
 
 ### Making it a true window
 
-For the literal view through your monitor, set the field of view and tilt from your seating position (*Sky* tab on Linux; `fov_deg` and `tilt_deg` on Windows):
+For the literal view through your monitor, set the field of view and tilt from your seating position (*Sky* tab):
 
 - **FOV** = 2 · atan(½ · screen width ÷ eye distance). Example: an 80 cm-wide screen seen from 96.5 cm → 2 · atan(40 / 96.5) ≈ **45°**.
 - **Tilt** = atan(height of the screen centre above your eye line ÷ eye distance). Example: eyes on the lower-third line of a 33.4 cm-tall screen → atan(5.57 / 96.5) ≈ **3.3°**, which puts the horizon on your eye line.
 
 ## Configuration
 
-Every setting lives in `config.toml`. The Linux settings window edits it for you; on Windows, edit it directly.
+Every setting lives in `config.toml`. The settings window edits it for you on both platforms; you can also edit it by hand.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
@@ -140,6 +128,7 @@ Every setting lives in `config.toml`. The Linux settings window edits it for you
 | `width`, `height` | `3440`, `1440` | Rendered size in physical pixels. |
 | `mag_limit` | `7.0` | Faintest star magnitude drawn. |
 | `show_constellation_lines`, `show_constellation_names`, `show_star_names`, `show_star_designations`, `show_planet_labels`, `show_horizon`, `show_timestamp` | `true` (timestamp `false`) | Toggle each layer. |
+| `appearance` | `"system"` | Settings window theme: `"system"`, `"light"` or `"dark"`. Doesn't affect the wallpaper. |
 
 Leave `live_wallpaper`, `autostart` and `saved_wallpaper` alone. The `enable`, `disable` and `autostart` commands manage them.
 
@@ -157,7 +146,7 @@ skywall render [--output FILE]   render now (sets the wallpaper only while live 
 skywall enable | disable         turn the live wallpaper on / off (off restores your old one)
 skywall autostart on|off         start with the GNOME session (Windows: no-op, the task already persists)
 skywall open                     open Stellarium aimed at the same view
-skywall settings                 settings window (Windows: opens config.toml in Notepad)
+skywall settings                 settings window
 skywall install                  (re)install timer/task, app entries, shortcut and right-click entry
 skywall hotkey                   (Windows) hold Win+Alt+S; started for you at sign-in
 ```
@@ -172,13 +161,13 @@ How the pieces map between platforms:
 | Hotkey | GNOME custom keybinding <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> | `skywall hotkey` listener, <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> |
 | Right-click entry | GNOME Shell extension `skywall@local` | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` |
 | App entry | `skywall.desktop` in the app grid | Start-menu shortcuts |
-| Settings | GTK 4 / libadwaita window | `config.toml` in Notepad |
+| Settings window | GTK 4 / libadwaita | Tkinter with the [Sun Valley](https://github.com/rdbende/Sun-Valley-ttk-theme) theme (sv-ttk) |
+| Light / dark | `Adw.StyleManager` colour scheme | sv-ttk light/dark + DWM dark title bar; *Match Windows* reads `AppsUseLightTheme` |
 | Stellarium | Flatpak `org.stellarium.Stellarium` | `stellarium.exe` (Program Files or `%LOCALAPPDATA%\Programs`) |
 
 ## Known limits
 
 - The GNOME right-click extension targets **GNOME Shell 43–44** (legacy `imports`). GNOME 45+ needs a port to ES modules — contributions welcome.
-- Windows has no settings window yet; settings are edited in `config.toml`.
 - On Windows 11 the right-click entry is only in the full menu (*Show more options*).
 - One monitor (on Windows, every monitor gets the same image); deep-sky objects and the Milky Way aren't drawn yet.
 - If you have enabled *south-based azimuth* in Stellarium, the "open in Stellarium" view will point the wrong way.
@@ -206,6 +195,7 @@ Data and models Skywall computes from:
 Software it builds on:
 
 - [Skyfield](https://rhodesmill.org/skyfield/) by Brandon Rhodes (MIT) — astrometry, apparent positions, Moon phase.
+- [Sun Valley ttk theme](https://github.com/rdbende/Sun-Valley-ttk-theme) (sv-ttk) by rdbende (MIT) — the Windows settings window's light and dark themes.
 - [NumPy](https://numpy.org) (BSD-3-Clause), [pycairo](https://pycairo.readthedocs.io) / [Cairo](https://cairographics.org) (LGPL-2.1 / MPL-1.1), [PyGObject](https://pygobject.gnome.org), GTK 4 and [libadwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/) (LGPL-2.1+), [pygeomag](https://github.com/boxpet/pygeomag) (MIT), [tomli-w](https://github.com/hukkin/tomli-w) (MIT).
 - [Stellarium](https://stellarium.org) (GPL-2.0-or-later) — the interactive view, driven through its [scripting API](https://stellarium.org/doc/head/scripting.html).
 

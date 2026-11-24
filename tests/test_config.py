@@ -36,3 +36,12 @@ def test_projection_setting(tmp_path):
 def test_detail_defaults(tmp_path):
     cfg = load_config(tmp_path / "c.toml")
     assert cfg.mag_limit == 7.0 and cfg.show_star_names is True and cfg.show_star_designations is True
+
+
+def test_appearance_defaults_and_normalises(tmp_path):
+    from skywall.config import Config, load_config, save_config
+    assert load_config(tmp_path / "missing.toml").appearance == "system"
+    save_config(Config(appearance="neon"), tmp_path / "c.toml")
+    assert load_config(tmp_path / "c.toml").appearance == "system"
+    save_config(Config(appearance="dark"), tmp_path / "c.toml")
+    assert load_config(tmp_path / "c.toml").appearance == "dark"

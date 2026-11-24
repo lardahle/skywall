@@ -20,6 +20,9 @@ else:
     DATA_DIR = _xdg("XDG_DATA_HOME", ".local/share") / "skywall"
 
 
+APPEARANCES = ("system", "light", "dark")
+
+
 @dataclass
 class Config:
     latitude: float | None = None
@@ -40,6 +43,7 @@ class Config:
     show_planet_labels: bool = True
     show_horizon: bool = True
     show_timestamp: bool = False
+    appearance: str = "system"  # settings window theme: system | light | dark
     live_wallpaper: bool = False
     autostart: bool = False
     saved_wallpaper: dict[str, str] = field(default_factory=dict)
@@ -51,6 +55,8 @@ def _normalise(cfg: Config) -> Config:
     cfg.facing_deg = float(cfg.facing_deg) % 360.0
     if cfg.projection not in ("perspective", "stereographic"):
         cfg.projection = "perspective"
+    if cfg.appearance not in APPEARANCES:
+        cfg.appearance = "system"
     if cfg.facing_reference not in ("magnetic", "true"):
         cfg.facing_reference = "magnetic"
     return cfg

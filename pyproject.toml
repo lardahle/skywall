@@ -9,7 +9,11 @@ description = "Live star-chart wallpaper of the sky your monitor faces"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 readme = "README.md"
-dependencies = ["skyfield", "numpy", "pygeomag", "tomli-w"]
+dependencies = [
+    "skyfield", "numpy", "pygeomag", "tomli-w",
+    "pycairo; sys_platform == 'win32'",  # Linux uses the system pycairo (with PyGObject)
+    "sv-ttk; sys_platform == 'win32'",  # light/dark theme for the Windows settings window
+]
 
 [project.optional-dependencies]
 dev = ["pytest"]

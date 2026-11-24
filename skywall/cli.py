@@ -245,12 +245,9 @@ def cmd_hotkey(args) -> int:
 
 
 def cmd_settings(args) -> int:
-    if IS_WINDOWS:  # no GTK/libadwaita here: edit the TOML, then `skywall render`/`enable`
-        path = config_path()
-        if not path.exists():
-            save_config(Config(), path)
-        subprocess.Popen(["notepad.exe", str(path)])
-        return 0
+    if IS_WINDOWS:  # no GTK/libadwaita here: the Tkinter twin of the same window
+        from .settings_win import run_settings as run_windows_settings
+        return run_windows_settings()
     from .settings_app import run_settings
     return run_settings()
 
