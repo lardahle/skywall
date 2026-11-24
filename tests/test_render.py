@@ -125,3 +125,12 @@ def test_timestamp_stays_inside_the_taskbar_insets():
     x_r, _, _ = _timestamp_layout(cr, text, 3840, 2160, (0, 0, right, 0))
     cr.set_font_size(size)
     assert x_r + cr.text_extents(text).x_advance < 3840 * (1 - right)
+
+
+def test_timestamp_text_has_date_and_time():
+    from datetime import datetime, timezone
+    from skywall.render import timestamp_text
+    when = datetime(2026, 11, 4, 17, 53, tzinfo=timezone.utc)
+    local = when.astimezone()
+    assert timestamp_text(when) == f"{local.day} {local:%b %Y} · {local:%H:%M}"
+    assert str(local.year) in timestamp_text(when) and ":" in timestamp_text(when)

@@ -186,9 +186,15 @@ def _timestamp_layout(cr, text: str, W: int, H: int, insets: Insets = NO_INSETS)
     return W * (1 - right) - margin - w, H * (1 - bottom) - margin, size
 
 
+def timestamp_text(when) -> str:
+    """Local date and time, e.g. "24 Nov 2026 · 10:53" — unambiguous in screenshots."""
+    local = when.astimezone()
+    return f"{local.day} {local:%b %Y} · {local:%H:%M}"
+
+
 def _reserve_timestamp(labels, scene: SkyScene, W: int, H: int, insets: Insets = NO_INSETS):
     """Claim the timestamp's spot before any other label, so star names can't displace it."""
-    text = f"updated {scene.when.astimezone():%H:%M}"
+    text = timestamp_text(scene.when)
     x, y, size = _timestamp_layout(labels.cr, text, W, H, insets)
     w = labels.cr.text_extents(text).x_advance
     labels.boxes.append((x - 3, y - size - 2, x + w + 3, y + 4))
@@ -199,6 +205,11 @@ def _draw_timestamp(cr, text: str, x: float, y: float, size: float) -> None:
     """Drawn last, on top of lines and stars."""
     cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
     cr.set_font_size(size)
+    ext = cr.text_extents(text)
+    pad = size * 0.45  # sky-coloured backing so lines and stars never cut through the text
+    cr.set_source_rgba(*BACKGROUND, 0.97)
+    cr.rectangle(x - pad, y - size - pad * 0.4, ext.x_advance + 2 * pad, size * 1.25 + pad)
+    cr.fill()
     cr.set_source_rgba(*TIMESTAMP_RGBA)
     cr.move_to(x, y)
     cr.show_text(text)
