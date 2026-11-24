@@ -62,9 +62,9 @@ If PowerShell refuses to run the script, allow local scripts for your account on
 - registers a hidden **Task Scheduler** task, `Skywall`, that re-renders every minute (left disabled until you turn the wallpaper on);
 - adds **Skywall** and **Skywall - Open in Stellarium** to the Start menu;
 - starts the <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> listener and puts it in your Startup folder;
-- adds **Open sky in Stellarium** to the desktop's right-click menu.
+- adds a **Skywall** submenu (*Open sky in Stellarium*, *Settings*) to the desktop's right-click menu.
 
-Then open **Skywall** from the Start menu (or run `.\.venv\Scripts\skywall settings`). It has the same three tabs as the GNOME window:
+Then open **Skywall** from the Start menu or the desktop's right-click menu (*Show more options* → *Skywall* → *Settings*), or run `.\.venv\Scripts\skywall settings`). It has the same three tabs as the GNOME window:
 
 1. **Location** — latitude, longitude (west is negative) and elevation, then the monitor's facing and whether that reading is *Magnetic* or *True north*.
 2. **System → Image size** — click **Use this screen** to fill in the panel's physical pixels.
@@ -80,7 +80,7 @@ You can also edit `%APPDATA%\skywall\config.toml` directly (*System → Edit con
 
 - <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd>. Shortcut files can't use the Windows key, so a tiny idle listener (`skywall hotkey`) holds this key. It starts at sign-in from the Startup folder.
 - Start menu → **Skywall - Open in Stellarium**.
-- Right-click the desktop → **Show more options** (or <kbd>Shift</kbd>+right-click) → **Open sky in Stellarium**. Windows 11's short menu only lists packaged apps, so the entry is in the full menu.
+- Right-click the desktop → **Show more options** (or <kbd>Shift</kbd>+right-click) → **Skywall** → **Open sky in Stellarium**. Windows 11's short menu only lists packaged apps, so the submenu is in the full menu.
 
 If Stellarium is already open, Skywall re-aims it through Stellarium's *Remote Control* plugin. Enable that plugin (Configuration → Plugins → Remote Control → *Load at startup*) for re-aiming to work.
 
@@ -157,7 +157,7 @@ How the pieces map between platforms:
 | Refresh every minute | systemd user timer `skywall.timer` | Task Scheduler task `Skywall` (`pythonw`, hidden, runs on battery) |
 | Start at login | `skywall autostart on` (enables the timer) | Automatic while enabled |
 | Hotkey | GNOME custom keybinding <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> | `skywall hotkey` listener, <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> |
-| Right-click entry | GNOME Shell extension `skywall@local` | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` |
+| Right-click entry | GNOME Shell extension `skywall@local` | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` (cascading: Stellarium, Settings) |
 | App entry | `skywall.desktop` in the app grid | Start-menu shortcuts |
 | Settings window | GTK 4 / libadwaita | Tkinter with the [Sun Valley](https://github.com/rdbende/Sun-Valley-ttk-theme) theme (sv-ttk) |
 | Light / dark | Follows the desktop (libadwaita) | sv-ttk light/dark + DWM dark title bar; *Match Windows* reads `AppsUseLightTheme` |
@@ -166,7 +166,7 @@ How the pieces map between platforms:
 ## Known limits
 
 - The GNOME right-click extension targets **GNOME Shell 43–44** (legacy `imports`). GNOME 45+ needs a port to ES modules — contributions welcome.
-- On Windows 11 the right-click entry is only in the full menu (*Show more options*).
+- On Windows 11 the right-click submenu is only in the full menu (*Show more options*).
 - One monitor (on Windows, every monitor gets the same image); deep-sky objects and the Milky Way aren't drawn yet.
 - If you have enabled *south-based azimuth* in Stellarium, the "open in Stellarium" view will point the wrong way.
 

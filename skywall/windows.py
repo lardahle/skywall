@@ -208,14 +208,39 @@ def install_shortcuts(start_menu: Path = START_MENU) -> None:
               "Open Stellarium aimed at the wallpaper's view")
 
 
-def install_context_menu() -> None:
-    """Desktop right-click → 'Open sky in Stellarium' (under 'Show more options' on Windows 11)."""
+CONTEXT_ITEMS = (("1open", "Open sky in Stellarium", "open"), ("2settings", "Settings", "settings"))
+ICON = r"%SystemRoot%\System32\imageres.dll,-1023"
+
+
+def _delete_tree(root, path: str) -> None:
     import winreg
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CONTEXT_KEY) as k:
-        winreg.SetValueEx(k, "", 0, winreg.REG_SZ, "Open sky in Stellarium")
-        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, r"%SystemRoot%\System32\imageres.dll,-1023")
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, CONTEXT_KEY + r"\command") as k:
-        winreg.SetValueEx(k, "", 0, winreg.REG_SZ, subprocess.list2cmdline(skywall_command("open")))
+    try:
+        with winreg.OpenKey(root, path) as k:
+            while True:
+                try:
+                    child = winreg.EnumKey(k, 0)
+                except OSError:
+                    break
+                _delete_tree(root, f"{path}\\{child}")
+        winreg.DeleteKey(root, path)
+    except FileNotFoundError:
+        pass
+
+
+def install_context_menu() -> None:
+    """Desktop right-click → Skywall ▸ Open sky in Stellarium / Settings (Windows 11: 'Show more options')."""
+    import winreg
+    hk = winreg.HKEY_CURRENT_USER
+    _delete_tree(hk, CONTEXT_KEY)  # replaces older single-verb installs cleanly
+    with winreg.CreateKey(hk, CONTEXT_KEY) as k:
+        winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, "Skywall")
+        winreg.SetValueEx(k, "SubCommands", 0, winreg.REG_SZ, "")  # cascade from the shell\ subkeys
+        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, ICON)
+    for key, label, cmd in CONTEXT_ITEMS:  # subkey names sort the items
+        with winreg.CreateKey(hk, rf"{CONTEXT_KEY}\shell\{key}") as k:
+            winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, label)
+        with winreg.CreateKey(hk, rf"{CONTEXT_KEY}\shell\{key}\command") as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, subprocess.list2cmdline(skywall_command(cmd)))
 
 
 STARTUP = START_MENU / "Startup"
