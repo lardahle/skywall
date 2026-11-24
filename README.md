@@ -46,6 +46,8 @@ Then open **Skywall** from the app grid:
 2. **Monitor direction** — see [Finding your monitor's direction](#finding-your-monitors-direction).
 3. **System → Live sky as wallpaper** — on. Optionally *Start with GNOME session*.
 
+*System → Appearance* switches the settings window between following the system, Light and Dark.
+
 ## Install on Windows
 
 In PowerShell:
@@ -126,7 +128,7 @@ Every setting lives in `config.toml`. The settings window edits it for you on bo
 | `width`, `height` | `3440`, `1440` | Rendered size in physical pixels. |
 | `mag_limit` | `7.0` | Faintest star magnitude drawn. |
 | `show_constellation_lines`, `show_constellation_names`, `show_star_names`, `show_star_designations`, `show_planet_labels`, `show_horizon`, `show_timestamp` | `true` (timestamp `false`) | Toggle each layer. |
-| `appearance` | `"system"` | Windows settings window theme: `"system"`, `"light"` or `"dark"` (on GNOME the window follows the desktop). Doesn't affect the wallpaper. |
+| `appearance` | `"system"` | Settings window theme: `"system"`, `"light"` or `"dark"`. Doesn't affect the wallpaper. |
 
 Leave `live_wallpaper`, `autostart` and `saved_wallpaper` alone. The `enable`, `disable` and `autostart` commands manage them.
 
@@ -160,7 +162,7 @@ How the pieces map between platforms:
 | Right-click entry | GNOME Shell extension `skywall@local` | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` (cascading: Stellarium, Settings) |
 | App entry | `skywall.desktop` in the app grid | Start-menu shortcuts |
 | Settings window | GTK 4 / libadwaita | Tkinter with the [Sun Valley](https://github.com/rdbende/Sun-Valley-ttk-theme) theme (sv-ttk) |
-| Light / dark | Follows the desktop (libadwaita) | sv-ttk light/dark + DWM dark title bar; *Match Windows* reads `AppsUseLightTheme` |
+| Light / dark | `Adw.StyleManager` colour scheme | sv-ttk light/dark + DWM dark title bar; *Match Windows* reads `AppsUseLightTheme` |
 | Stellarium | Flatpak `org.stellarium.Stellarium` | `stellarium.exe` (Program Files or `%LOCALAPPDATA%\Programs`) |
 
 ## Known limits

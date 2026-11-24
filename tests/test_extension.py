@@ -37,3 +37,18 @@ def test_enable_from_empty():
     r = FakeShellSettings("@as []")
     enable_extension(r)
     assert ast.literal_eval(r.value) == [UUID]
+
+
+def test_install_icons_copies_hicolor_sizes(tmp_path, monkeypatch):
+    from conftest import FakeRunner
+    from skywall import cli
+    r = FakeRunner()
+    monkeypatch.setattr(cli, "RUNNER", r)
+    theme = tmp_path / "hicolor"
+    cli.install_icons(theme=theme)
+    assert (theme / "48x48" / "apps" / "skywall.png").exists()
+    assert (theme / "256x256" / "apps" / "skywall.png").exists()
+    assert not any(c[0] == "gtk-update-icon-cache" for c in r.calls)  # no index.theme: leave the cache alone
+    (theme / "index.theme").write_text("[Icon Theme]\n")
+    cli.install_icons(theme=theme)
+    assert any(c[0] == "gtk-update-icon-cache" for c in r.calls)

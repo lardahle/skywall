@@ -3,7 +3,7 @@ Type=Application
 Name=Skywall
 Comment=Live star-chart wallpaper of the sky your monitor faces
 Exec=@BIN@ settings
-Icon=weather-clear-night-symbolic
+Icon=skywall
 Categories=Education;Science;Astronomy;
 Actions=open-stellarium;
 

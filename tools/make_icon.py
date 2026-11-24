@@ -2,7 +2,8 @@
 
     python tools/make_icon.py
 
-Writes skywall.ico (16–256 px, PNG-compressed entries) and skywall-256.png. Sizes up to 32 px
+Writes skywall.ico (16–256 px, PNG-compressed entries), skywall-256.png, and the freedesktop
+hicolor theme sizes (hicolor/<n>x<n>/apps/skywall.png) that `skywall install` copies on Linux. Sizes up to 32 px
 are drawn from a simplified design (no thin lines) so they stay legible in title bars and menus.
 """
 
@@ -15,6 +16,7 @@ import cairo
 
 OUT = Path(__file__).resolve().parent.parent / "data" / "icons"
 SIZES = (16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
+HICOLOR_SIZES = (16, 24, 32, 48, 64, 128, 256)
 
 SKY_TOP = (0.035, 0.055, 0.15)
 SKY_BOTTOM = (0.09, 0.13, 0.30)
@@ -145,7 +147,11 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     write_ico(OUT / "skywall.ico")
     draw(256).write_to_png(str(OUT / "skywall-256.png"))
-    print(f"wrote {OUT / 'skywall.ico'} and skywall-256.png")
+    for sz in HICOLOR_SIZES:
+        target = OUT / "hicolor" / f"{sz}x{sz}" / "apps" / "skywall.png"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        draw(sz).write_to_png(str(target))
+    print(f"wrote {OUT / 'skywall.ico'}, skywall-256.png and hicolor/")
 
 
 if __name__ == "__main__":
