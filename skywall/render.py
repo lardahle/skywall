@@ -17,6 +17,8 @@ BELOW_HORIZON_TINT = (0.03, 0.04, 0.03, 0.35)
 LINE_COLOR = (0.37, 0.56, 0.84, 0.55)
 LINE_WIDTH = 1.4
 CONST_LABEL_COLOR = (0.56, 0.70, 1.0, 0.75)
+# TODO: scale label sizes (and star radii, line widths) with image height, as the timestamp does
+# (H / 90). These fixed pixel sizes were tuned on 3440×1440 and look small on 4K at 150%.
 CONST_LABEL_SIZE = 15
 BODY_LABEL_SIZE = 15
 STAR_LABEL_MAG = 4.0  # named stars at least this bright get a label
@@ -215,6 +217,7 @@ def _draw_timestamp(cr, text: str, x: float, y: float, size: float) -> None:
     cr.show_text(text)
 
 
+# TODO: draw the Milky Way band and bright deep-sky objects (M31, M42, the Pleiades as a cluster, ...).
 def render_sky(scene: SkyScene, constellations: list[Constellation],
                proj: Projection, cfg: Config, insets: Insets = NO_INSETS) -> cairo.ImageSurface:
     """`insets`: screen edges covered by a taskbar/panel, as fractions, so overlays stay visible."""

@@ -197,6 +197,9 @@ class SettingsWindow:
         view = self._group(tab, "View")
 
         fov_val = tk.StringVar(value=f"{self.cfg.fov_deg:.0f}°")
+        # TODO: a "From where I sit" helper (screen width and height, eye distance, eye height) that
+        # fills FOV = 2·atan(½·width ÷ distance) and tilt = atan(centre above eye line ÷ distance), as
+        # the README's "Making it a true window" describes. Mirror it in settings_app.py (GTK).
         fov = ttk.Scale(view, from_=20, to=180, value=self.cfg.fov_deg, length=240)
 
         def on_fov_move(v):

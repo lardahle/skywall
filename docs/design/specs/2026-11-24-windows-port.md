@@ -48,3 +48,4 @@ Rendering (`sky`, `projection`, `render`, `catalog`, `geomag`) was already platf
 - Confirm the GNOME path still works on the Debian 12 machine before merging.
 - *Match Windows* is read when the window opens. Live switching on a system theme change (`WM_SETTINGCHANGE`) isn't wired up.
 - Per-monitor wallpapers through `IDesktopWallpaper`. Multi-monitor is out of scope for v0.1 on both platforms.
+- The rest of the backlog lives in the code as `TODO:` comments (`git grep -n TODO`): a seating-position FOV/tilt helper, labels that scale with resolution, `skywall uninstall`, a by-hand check of `disable`, the lock screen, coping with a moved repo folder, and the Milky Way and deep-sky objects.

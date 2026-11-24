@@ -260,6 +260,9 @@ def cmd_settings(args) -> int:
     return run_settings()
 
 
+# TODO: `skywall uninstall` — disable (restore the wallpaper), then remove the scheduled task or
+# systemd units, Start-menu/Startup shortcuts or .desktop file, the right-click entry or GNOME
+# extension, the hotkey listener, and optionally config and data. Today the README lists the steps by hand.
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="skywall")
     sub = p.add_subparsers(dest="cmd", required=True)

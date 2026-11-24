@@ -30,6 +30,9 @@ CONTEXT_KEY = r"Software\Classes\DesktopBackground\Shell\Skywall"
 START_MENU = Path(os.environ.get("APPDATA", Path.home())) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
 
 
+# TODO: the task, shortcuts, right-click entry and hotkey all point at this venv's pythonw by absolute
+# path, so moving or re-cloning the repo breaks them until install.ps1 runs again. Consider
+# detecting a stale path at startup, or installing to a fixed per-user location.
 def pythonw() -> str:
     """The windowless interpreter next to the running one (no console flash from the task)."""
     exe = Path(sys.executable)
@@ -70,6 +73,9 @@ def _read_desktop(name: str, default: str) -> str:
         return default
 
 
+# TODO: multi-monitor — render per monitor (its own size and facing) and set each one via
+# IDesktopWallpaper::SetWallpaper. SPI_SETDESKWALLPAPER puts one image on every screen.
+# TODO: optionally set the lock screen too (Windows.System.UserProfile.LockScreen via WinRT), like GNOME.
 def set_wallpaper(path: Path, runner: Runner = run) -> None:
     _apply_wallpaper(str(Path(path).resolve()), STYLE_FILL, "0")
 
@@ -85,6 +91,8 @@ def save_current(cfg: Config, out_dir: Path, runner: Runner = run) -> None:
                            "tile": _read_desktop("TileWallpaper", "0")}
 
 
+# TODO: check by hand on a real desktop (only the stubbed test covers it): turn live off and
+# confirm the previous picture and fit (WallpaperStyle) come back.
 def restore(cfg: Config, runner: Runner = run) -> None:
     if not cfg.saved_wallpaper:
         return
