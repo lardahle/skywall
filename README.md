@@ -179,6 +179,8 @@ How the pieces map between platforms:
 
 On Windows use `.\.venv\Scripts\python.exe -m pytest -q`. The suite runs on both platforms. Tests describe the GNOME backend unless marked `windows`. A `conftest.py` fixture pins the backend, so both sets run on either OS.
 
+The app icon (`data/icons/`) is drawn by [`tools/make_icon.py`](tools/make_icon.py) in the wallpaper's own palette. Run it again after changing the design.
+
 Design notes are in [`docs/design/`](docs/design), including the [Windows port](docs/design/specs/2026-11-24-windows-port.md).
 
 ## Sources and credits

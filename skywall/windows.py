@@ -19,6 +19,8 @@ from .config import Config
 from .runner import Runner, run
 
 TASK_NAME = "Skywall"
+APP_ICON = Path(__file__).resolve().parent.parent / "data" / "icons" / "skywall.ico"  # tools/make_icon.py
+APP_ID = "Skywall.Settings"  # taskbar identity, so the window gets Skywall's icon, not Python's
 DESKTOP_KEY = r"Control Panel\Desktop"
 STYLE_FILL = "10"
 SPI_SETDESKWALLPAPER = 0x0014
@@ -212,12 +214,12 @@ def _shortcut(lnk: Path, command: list[str], description: str, hotkey: str = "")
         "$s.TargetPath = $env:SW_EXE",
         "$s.Arguments = $env:SW_ARGS",
         "$s.Description = $env:SW_DESC",
-        "$s.IconLocation = \"$env:SystemRoot\\System32\\imageres.dll,-1023\"",
+        "$s.IconLocation = \"$env:SW_ICON,0\"",
         "if ($env:SW_HOTKEY) { $s.Hotkey = $env:SW_HOTKEY }",
         "$s.Save()",
     ])
     env = dict(os.environ, SW_LNK=str(lnk), SW_EXE=exe, SW_ARGS=subprocess.list2cmdline(args),
-               SW_DESC=description, SW_HOTKEY=hotkey)
+               SW_DESC=description, SW_HOTKEY=hotkey, SW_ICON=str(APP_ICON))
     subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
                    check=True, capture_output=True, env=env)
 
@@ -230,7 +232,6 @@ def install_shortcuts(start_menu: Path = START_MENU) -> None:
 
 
 CONTEXT_ITEMS = (("1open", "Open sky in Stellarium", "open"), ("2settings", "Settings", "settings"))
-ICON = r"%SystemRoot%\System32\imageres.dll,-1023"
 
 
 def _delete_tree(root, path: str) -> None:
@@ -256,7 +257,7 @@ def install_context_menu() -> None:
     with winreg.CreateKey(hk, CONTEXT_KEY) as k:
         winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, "Skywall")
         winreg.SetValueEx(k, "SubCommands", 0, winreg.REG_SZ, "")  # cascade from the shell\ subkeys
-        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, ICON)
+        winreg.SetValueEx(k, "Icon", 0, winreg.REG_SZ, f"{APP_ICON},0")
     for key, label, cmd in CONTEXT_ITEMS:  # subkey names sort the items
         with winreg.CreateKey(hk, rf"{CONTEXT_KEY}\shell\{key}") as k:
             winreg.SetValueEx(k, "MUIVerb", 0, winreg.REG_SZ, label)
