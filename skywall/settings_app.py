@@ -17,12 +17,19 @@ from .stellarium import read_stellarium_location  # noqa: E402
 
 APP_ID = "io.github.skywall.Settings"
 RERENDER_DELAY_MS = 500
+APPEARANCES = (("system", "Follow system"), ("light", "Light"), ("dark", "Dark"))
+
+
+def apply_appearance(appearance: str) -> None:
+    scheme = {"light": Adw.ColorScheme.FORCE_LIGHT, "dark": Adw.ColorScheme.FORCE_DARK}
+    Adw.StyleManager.get_default().set_color_scheme(scheme.get(appearance, Adw.ColorScheme.DEFAULT))
 
 
 class SettingsWindow(Adw.PreferencesWindow):
     def __init__(self, app: Adw.Application):
         super().__init__(application=app, title="Skywall", default_width=560, default_height=720)
         self.cfg = load_config(cli.config_path())
+        apply_appearance(self.cfg.appearance)
         self._pending = 0
         self._busy = False
         self.add(self._sky_page())
@@ -196,6 +203,19 @@ class SettingsWindow(Adw.PreferencesWindow):
         self.auto_sw.set_sensitive(self.cfg.live_wallpaper)
         wall.add(auto_row)
         page.add(wall)
+
+        look = Adw.PreferencesGroup(title="Appearance")
+        theme = Adw.ComboRow(title="Theme", subtitle="Settings window only",
+                             model=Gtk.StringList.new([label for _k, label in APPEARANCES]))
+        theme.set_selected([k for k, _l in APPEARANCES].index(self.cfg.appearance))
+
+        def on_theme(r, _p):
+            self.cfg.appearance = APPEARANCES[r.get_selected()][0]
+            self._save()  # no re-render: the wallpaper is always night
+            apply_appearance(self.cfg.appearance)
+        theme.connect("notify::selected", on_theme)
+        look.add(theme)
+        page.add(look)
 
         explore = Adw.PreferencesGroup(title="Explore")
         open_row = Adw.ActionRow(title="Open in Stellarium",
