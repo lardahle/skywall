@@ -108,3 +108,20 @@ def test_dim_named_star_falls_back_to_designation():
     on = render_sky(sc, [], P(), Config(show_horizon=False))
     off = render_sky(sc, [], P(), Config(show_horizon=False, show_star_designations=False))
     assert bytes(on.get_data()) != bytes(off.get_data())
+
+
+
+def test_timestamp_stays_inside_the_taskbar_insets():
+    import cairo
+    from skywall.render import _timestamp_layout
+    cr = cairo.Context(cairo.ImageSurface(cairo.FORMAT_RGB24, 10, 10))
+    text = "updated 10:52"
+    x, y, size = _timestamp_layout(cr, text, 3840, 2160)  # no taskbar: just a margin
+    assert 2160 - 40 < y < 2160 and size >= 20
+    bottom = 72 / 2160  # 48 px taskbar at 150 %
+    _, y_tb, _ = _timestamp_layout(cr, text, 3840, 2160, (0, 0, 0, bottom))
+    assert y_tb < 2160 - 72
+    right = 0.05  # taskbar docked on the right
+    x_r, _, _ = _timestamp_layout(cr, text, 3840, 2160, (0, 0, right, 0))
+    cr.set_font_size(size)
+    assert x_r + cr.text_extents(text).x_advance < 3840 * (1 - right)

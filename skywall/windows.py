@@ -92,6 +92,27 @@ def restore(cfg: Config, runner: Runner = run) -> None:
     cfg.saved_wallpaper = {}
 
 
+def taskbar_insets() -> tuple[float, float, float, float]:
+    """Fractions of the primary screen the taskbar covers (left, top, right, bottom).
+
+    Work area vs. full screen, both in the same (possibly DPI-virtualised) units, so the
+    ratio is right at any scaling, on any taskbar edge, and 0 when the taskbar auto-hides.
+    """
+    import ctypes
+    from ctypes import wintypes
+    try:
+        work = wintypes.RECT()
+        if not ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0):  # SPI_GETWORKAREA
+            return (0.0, 0.0, 0.0, 0.0)
+        sw, sh = ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1)
+        if sw <= 0 or sh <= 0:
+            return (0.0, 0.0, 0.0, 0.0)
+        return (max(0, work.left) / sw, max(0, work.top) / sh,
+                max(0, sw - work.right) / sw, max(0, sh - work.bottom) / sh)
+    except (AttributeError, OSError):
+        return (0.0, 0.0, 0.0, 0.0)
+
+
 # --- scheduler ---------------------------------------------------------------------------
 
 def task_xml(command: list[str], user: str, enabled: bool = False) -> str:
