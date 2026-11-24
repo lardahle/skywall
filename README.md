@@ -64,7 +64,7 @@ If PowerShell refuses to run the script, allow local scripts for your account on
 - starts the <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> listener and puts it in your Startup folder;
 - adds a **Skywall** submenu (*Open sky in Stellarium*, *Settings*) to the desktop's right-click menu.
 
-Then open **Skywall** from the Start menu or the desktop's right-click menu (*Show more options* → *Skywall* → *Settings*), or run `.\.venv\Scripts\skywall settings`). It has the same three tabs as the GNOME window:
+Then open **Skywall** from the Start menu or the desktop's right-click menu (*Show more options* → *Skywall* → *Settings*), or run `.\.venv\Scripts\skywall settings`. It has the same three tabs as the GNOME window:
 
 1. **Location** — latitude, longitude (west is negative) and elevation, then the monitor's facing and whether that reading is *Magnetic* or *True north*.
 2. **System → Image size** — click **Use this screen** to fill in the panel's physical pixels.
