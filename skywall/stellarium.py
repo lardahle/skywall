@@ -1,6 +1,7 @@
 """Hand-off to Stellarium: read its location, aim it at Skywall's view."""
 
 import configparser
+import os
 import subprocess
 import urllib.parse
 import urllib.request
@@ -11,8 +12,12 @@ from .config import Config
 from .projection import make_projection
 from .runner import Runner, run
 
-STELLARIUM_CONFIG = Path.home() / ".stellarium" / "config.ini"
-SCRIPTS_DIR = Path.home() / ".stellarium" / "scripts"
+if os.name == "nt":
+    _USER_DIR = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "Stellarium"
+else:
+    _USER_DIR = Path.home() / ".stellarium"
+STELLARIUM_CONFIG = _USER_DIR / "config.ini"
+SCRIPTS_DIR = _USER_DIR / "scripts"
 SCRIPT_NAME = "skywall.ssc"
 REMOTE_URL = "http://localhost:8090/api/scripts/direct"
 
@@ -51,7 +56,17 @@ def build_script(lat: float, lon: float, elevation_m: float, true_az: float, til
     ])
 
 
+def _windows_exe() -> Path | None:
+    from .catalog import _windows_stellarium_dirs
+    return next((d / "stellarium.exe" for d in _windows_stellarium_dirs() if (d / "stellarium.exe").exists()), None)
+
+
 def _running(runner: Runner) -> bool:
+    if os.name == "nt":
+        try:
+            return "stellarium.exe" in runner(["tasklist", "/FI", "IMAGENAME eq stellarium.exe", "/NH"]).lower()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
     try:
         return STELLARIUM_APP in runner(["flatpak", "ps", "--columns=application"])
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -68,11 +83,25 @@ def open_in_stellarium(cfg: Config, true_az: float, scripts_dir: Path = SCRIPTS_
             body = urllib.parse.urlencode({"code": script}).encode()
             urllib.request.urlopen(REMOTE_URL, data=body, timeout=3)
         except OSError:
-            subprocess.Popen(["notify-send", "Skywall",
-                              "Stellarium is already open — enable its Remote Control plugin to re-aim it"])
+            msg = "Stellarium is already open — enable its Remote Control plugin to re-aim it"
+            if os.name == "nt":
+                from .windows import notify
+                notify(msg)
+            else:
+                subprocess.Popen(["notify-send", "Skywall", msg])
         return
     scripts_dir = Path(scripts_dir)
     scripts_dir.mkdir(parents=True, exist_ok=True)
-    (scripts_dir / SCRIPT_NAME).write_text(script)
+    (scripts_dir / SCRIPT_NAME).write_text(script, encoding="utf-8")
+    if os.name == "nt":
+        exe = _windows_exe()
+        if exe is None:
+            from .windows import notify
+            notify("Stellarium isn't installed — winget install Stellarium.Stellarium")
+            return
+        subprocess.Popen([str(exe), "--startup-script", SCRIPT_NAME], cwd=exe.parent,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=subprocess.DETACHED_PROCESS)
+        return
     subprocess.Popen(["flatpak", "run", STELLARIUM_APP, "--startup-script", SCRIPT_NAME],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)

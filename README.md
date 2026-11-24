@@ -19,7 +19,7 @@ Think [Sky Map](https://github.com/sky-map-team/stardroid), but for a desktop th
 
 ## Requirements
 
-- Linux with **GNOME** (tested on GNOME 43 / X11, Debian 12).
+- Linux with **GNOME** (tested on GNOME 43 / X11, Debian 12), or **Windows 10/11** — see [Windows](#windows).
 - System **Python ≥ 3.11 with PyGObject, pycairo, GTK 4 and libadwaita ≥ 1.2** — on Debian/Ubuntu: `sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1`.
 - **Stellarium** as a Flatpak (`flatpak install flathub org.stellarium.Stellarium`). Skywall reads its constellation lines once on first run, and uses it for the interactive view.
 - Internet on first run only, to download the star catalogue (~35 MB) and planetary ephemeris (~17 MB).
@@ -45,6 +45,25 @@ For the literal view through your monitor, set the field of view and tilt from y
 
 - **FOV** = 2 · atan(½ · screen width ÷ eye distance). Example: an 80 cm-wide screen seen from 96.5 cm → 2 · atan(40 / 96.5) ≈ **45°**.
 - **Tilt** = atan(height of the screen centre above your eye line ÷ eye distance). Example: eyes on the lower-third line of a 33.4 cm-tall screen → atan(5.57 / 96.5) ≈ **3.3°**, which puts the horizon on your eye line.
+
+## Windows
+
+Works on Windows 10/11 with Python ≥ 3.11 from python.org. Stellarium is optional (`winget install Stellarium.Stellarium`): without it, constellation lines are downloaded once from Stellarium's GitHub.
+
+```powershell
+git clone https://github.com/lardahle/skywall.git; cd skywall; .\install.ps1
+.\.venv\Scripts\skywall settings   # opens config.toml in Notepad: set latitude, longitude, facing_deg, width/height
+.\.venv\Scripts\skywall enable
+```
+
+What's different from GNOME:
+
+- **Refresh** — a hidden Task Scheduler task (`Skywall`) runs `pythonw -m skywall.cli render` every minute, also on battery. It keeps running across sign-outs and reboots until `skywall disable`, so `autostart` does nothing here.
+- **Settings** — there's no GTK window on Windows; `skywall settings` opens the TOML file in Notepad.
+- **Stellarium hand-off** — Start menu → *Skywall - Open in Stellarium*, hotkey <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd>, or right-click the desktop → *Show more options* → *Open sky in Stellarium*.
+- **Size** — set `width`/`height` to the panel's physical pixels (e.g. 3840×2160 for a 4K panel at 150% scaling).
+- **Paths** — config in `%APPDATA%\skywall\config.toml`, data and images in `%LOCALAPPDATA%\skywall\`.
+- Turning it off restores your previous picture. If that was Windows Spotlight, you'll get the last Spotlight image back as a static picture. Switch Spotlight back on in Settings → Personalization → Background.
 
 ## Command line
 

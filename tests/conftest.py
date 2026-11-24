@@ -24,3 +24,11 @@ class FakeRunner:
         if cmd[:2] == ["gsettings", "get"]:
             return self.values.get(cmd[3], "''") + "\n"
         return ""
+
+
+@pytest.fixture(autouse=True)
+def _linux_backend(request, monkeypatch):
+    """Existing tests describe the GNOME backend; run them against it on any OS."""
+    if "windows" not in request.keywords:
+        from skywall import cli
+        monkeypatch.setattr(cli, "IS_WINDOWS", False)

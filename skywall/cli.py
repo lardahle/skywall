@@ -2,7 +2,6 @@
 
 import argparse
 import contextlib
-import fcntl
 import os
 import subprocess
 import sys
@@ -22,9 +21,11 @@ from . import scheduler
 from .extension import enable_extension, install_extension
 from .keybinding import add_custom_keybinding
 from .stellarium import open_in_stellarium
-from .wallpaper import next_wallpaper_path, restore, save_current, set_wallpaper
+from . import wallpaper
+from .wallpaper import next_wallpaper_path
 
 RUNNER = run  # replaced in tests
+IS_WINDOWS = sys.platform == "win32"  # tests pin this to exercise one backend
 NO_LOCATION = "skywall: location not set — run `skywall settings`"
 
 
@@ -34,6 +35,22 @@ def config_path() -> Path:
 
 def data_dir() -> Path:
     return Path(os.environ.get("SKYWALL_DATA") or config_mod.DATA_DIR)
+
+
+def _wallpaper():
+    """Module providing set_wallpaper / save_current / restore for this platform."""
+    if IS_WINDOWS:
+        from . import windows
+        return windows
+    return wallpaper
+
+
+def _scheduler():
+    """Module providing start / stop / stop_service / set_autostart for this platform."""
+    if IS_WINDOWS:
+        from . import windows
+        return windows
+    return scheduler
 
 
 def _has_location(cfg: Config) -> bool:
@@ -64,11 +81,38 @@ def render_lock(data: Path, blocking: bool = True):
     data = Path(data)
     data.mkdir(parents=True, exist_ok=True)
     with open(data / ".lock", "w") as f:
-        fcntl.flock(f, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        _lock(f, blocking)
         try:
             yield
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            _unlock(f)
+
+
+def _lock(f, blocking: bool) -> None:
+    if os.name == "nt":
+        import msvcrt
+        import time
+        while True:
+            try:
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                return
+            except OSError:
+                if not blocking:
+                    raise BlockingIOError("another skywall render holds the lock")
+                time.sleep(0.1)
+    import fcntl
+    fcntl.flock(f, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+
+
+def _unlock(f) -> None:
+    if os.name == "nt":
+        import msvcrt
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        return
+    import fcntl
+    fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def _render_wallpaper(cfg: Config, data: Path) -> int:
@@ -79,7 +123,7 @@ def _render_wallpaper(cfg: Config, data: Path) -> int:
         except DataUnavailable as e:
             print(f"skywall: star data unavailable: {e}", file=sys.stderr)
             return 3
-        set_wallpaper(out, RUNNER)
+        _wallpaper().set_wallpaper(out, RUNNER)
     return 0
 
 
@@ -115,7 +159,7 @@ def cmd_enable(args) -> int:
     if not _has_location(cfg):
         print(NO_LOCATION, file=sys.stderr)
         return 2
-    save_current(cfg, data_dir() / "wallpaper", RUNNER)
+    _wallpaper().save_current(cfg, data_dir() / "wallpaper", RUNNER)
     cfg.live_wallpaper = True
     save_config(cfg, path)
     code = _render_wallpaper(cfg, data_dir())
@@ -125,7 +169,7 @@ def cmd_enable(args) -> int:
         cfg.saved_wallpaper = {}
         save_config(cfg, path)
         return code
-    scheduler.start(RUNNER)
+    _scheduler().start(RUNNER)
     return 0
 
 
@@ -136,11 +180,12 @@ def cmd_disable(args) -> int:
     cfg.autostart = False
     save_config(cfg, path)
     with render_lock(data_dir()):
-        restore(cfg, RUNNER)
+        _wallpaper().restore(cfg, RUNNER)
     save_config(cfg, path)
-    _quietly(scheduler.stop, RUNNER)
-    _quietly(scheduler.stop_service, RUNNER)
-    _quietly(scheduler.set_autostart, False, RUNNER)
+    sched = _scheduler()
+    _quietly(sched.stop, RUNNER)
+    _quietly(sched.stop_service, RUNNER)
+    _quietly(sched.set_autostart, False, RUNNER)
     return 0
 
 
@@ -151,7 +196,7 @@ def cmd_autostart(args) -> int:
     if on and not cfg.live_wallpaper:
         print("skywall: turn on the live wallpaper first (`skywall enable`)", file=sys.stderr)
         return 1
-    scheduler.set_autostart(on, RUNNER)
+    _scheduler().set_autostart(on, RUNNER)
     cfg.autostart = on
     save_config(cfg, path)
     return 0
@@ -171,6 +216,12 @@ def cmd_open(args) -> int:
 
 
 def cmd_install(args) -> int:
+    if IS_WINDOWS:
+        from . import windows
+        windows.install_task(enabled=load_config(config_path()).live_wallpaper, runner=RUNNER)
+        windows.install_shortcuts()
+        windows.install_context_menu()
+        return 0
     exe = _bin()
     scheduler.install_units(scheduler.UNIT_DIR, exe, RUNNER)
     template = Path(__file__).resolve().parent.parent / "data" / "skywall.desktop.in"
@@ -184,6 +235,12 @@ def cmd_install(args) -> int:
 
 
 def cmd_settings(args) -> int:
+    if IS_WINDOWS:  # no GTK/libadwaita here: edit the TOML, then `skywall render`/`enable`
+        path = config_path()
+        if not path.exists():
+            save_config(Config(), path)
+        subprocess.Popen(["notepad.exe", str(path)])
+        return 0
     from .settings_app import run_settings
     return run_settings()
 

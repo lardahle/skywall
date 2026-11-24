@@ -21,4 +21,4 @@ skywall = "skywall.cli:main"
 packages = ["skywall"]
 
 [tool.pytest.ini_options]
-markers = ["network: needs downloaded catalogue/ephemeris data"]
+markers = ["network: needs downloaded catalogue/ephemeris data", "windows: exercises the Windows backend"]

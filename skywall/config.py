@@ -12,8 +12,12 @@ def _xdg(var: str, fallback: str) -> Path:
     return Path(os.environ.get(var) or Path.home() / fallback)
 
 
-CONFIG_PATH = _xdg("XDG_CONFIG_HOME", ".config") / "skywall" / "config.toml"
-DATA_DIR = _xdg("XDG_DATA_HOME", ".local/share") / "skywall"
+if os.name == "nt":
+    CONFIG_PATH = _xdg("APPDATA", "AppData/Roaming") / "skywall" / "config.toml"
+    DATA_DIR = _xdg("LOCALAPPDATA", "AppData/Local") / "skywall"
+else:
+    CONFIG_PATH = _xdg("XDG_CONFIG_HOME", ".config") / "skywall" / "config.toml"
+    DATA_DIR = _xdg("XDG_DATA_HOME", ".local/share") / "skywall"
 
 
 @dataclass

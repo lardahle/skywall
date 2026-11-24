@@ -1,7 +1,9 @@
 """Star catalogue (HYG v4.1, Hipparcos-based; CC BY-SA 4.0) and constellation lines (Stellarium 'modern' sky culture)."""
 
 import json
+import os
 import subprocess
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +32,13 @@ CATALOG_EPOCH_JD = 2451545.0  # J2000: HYG positions are J2000
 HYG_URL = "https://raw.githubusercontent.com/astronexus/HYG-Database/c7f7f883fe678cc7680169a50ccd7dcc49b060ce/hyg/CURRENT/hygdata_v41.csv"
 STELLARIUM_APP = "org.stellarium.Stellarium"
 _MODERN_INDEX = "files/share/stellarium/skycultures/modern/index.json"
+# Fallback when no local Stellarium is found: the same file from a pinned Stellarium release.
+MODERN_INDEX_URL = "https://raw.githubusercontent.com/Stellarium/stellarium/v25.3/skycultures/modern/index.json"
+
+
+def _windows_stellarium_dirs() -> list[Path]:
+    roots = [os.environ.get(v) for v in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)", "LOCALAPPDATA")]
+    return [Path(r) / sub / "Stellarium" for r in roots if r for sub in ("", "Programs")]
 
 
 class DataUnavailable(Exception):
@@ -56,7 +65,13 @@ class Constellation:
     lines: list[list[int]]
 
 
-def _stellarium_index(runner: Runner) -> Path:
+def _stellarium_index(runner: Runner, data_dir: Path | None = None) -> Path:
+    """The 'modern' sky culture: local Stellarium (Flatpak or Windows install), else downloaded."""
+    if os.name == "nt":
+        for d in _windows_stellarium_dirs():
+            path = d / "skycultures" / "modern" / "index.json"
+            if path.exists():
+                return path
     for scope in ("--user", "--system"):
         try:
             loc = runner(["flatpak", "info", scope, "--show-location", STELLARIUM_APP]).strip()
@@ -65,16 +80,24 @@ def _stellarium_index(runner: Runner) -> Path:
         path = Path(loc) / _MODERN_INDEX
         if path.exists():
             return path
-    raise DataUnavailable("Stellarium (Flatpak) not found: needed once for constellation lines")
+    if data_dir is not None:
+        target = Path(data_dir) / "stellarium-modern-index.json"
+        try:
+            with urllib.request.urlopen(MODERN_INDEX_URL, timeout=30) as r:
+                target.write_bytes(r.read())
+            return target
+        except OSError as e:
+            raise DataUnavailable(f"constellation lines: no local Stellarium and download failed: {e}") from e
+    raise DataUnavailable("Stellarium not found: needed once for constellation lines")
 
 
 def _build_constellations(index: Path, out: Path) -> None:
-    raw = json.loads(index.read_text())
+    raw = json.loads(index.read_text(encoding="utf-8"))
     cons = [{"abbr": c["id"].split()[-1],
              "name": c.get("common_name", {}).get("native", c["id"].split()[-1]),
              "lines": c["lines"]}
             for c in raw["constellations"]]
-    out.write_text(json.dumps(cons))
+    out.write_text(json.dumps(cons), encoding="utf-8")
 
 
 def _parse_hyg(csv_path: Path, mag_limit: float, keep: set[int] = frozenset()) -> dict[str, np.ndarray]:
@@ -109,7 +132,7 @@ def ensure_data(data_dir: Path = DATA_DIR, mag_limit: float = 6.5, runner: Runne
         return
     data_dir.mkdir(parents=True, exist_ok=True)
     if not cons.exists():
-        _build_constellations(_stellarium_index(runner), cons)
+        _build_constellations(_stellarium_index(runner, data_dir), cons)
     try:
         from skyfield.api import Loader
         load = Loader(str(sky), verbose=False)
@@ -141,5 +164,5 @@ def load_stars(data_dir: Path = DATA_DIR, mag_limit: float = 6.5) -> StarCatalog
 
 
 def load_constellations(data_dir: Path = DATA_DIR) -> list[Constellation]:
-    raw = json.loads((Path(data_dir) / "constellations.json").read_text())
+    raw = json.loads((Path(data_dir) / "constellations.json").read_text(encoding="utf-8"))
     return [Constellation(**c) for c in raw]

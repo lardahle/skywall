@@ -1,7 +1,10 @@
+import io
+import json
 import subprocess
 
 import pytest
 
+from skywall import catalog
 from skywall.catalog import DataUnavailable, ensure_data, load_constellations, load_stars
 
 
@@ -26,11 +29,40 @@ def test_orion_constellation(data):
     assert ori.name == "Orion" and any(27989 in line for line in ori.lines)  # Betelgeuse
 
 
-def test_missing_stellarium_raises(tmp_path):
-    def runner(cmd):
-        raise subprocess.CalledProcessError(1, cmd)
+def _no_flatpak(cmd):
+    raise subprocess.CalledProcessError(1, cmd)
+
+
+def _no_local_stellarium(monkeypatch):
+    monkeypatch.setattr(catalog, "_windows_stellarium_dirs", lambda: [])
+
+
+def test_missing_stellarium_and_offline_raises(tmp_path, monkeypatch):
+    _no_local_stellarium(monkeypatch)
+
+    def offline(*a, **k):
+        raise OSError("offline")
+    monkeypatch.setattr(catalog.urllib.request, "urlopen", offline)
     with pytest.raises(DataUnavailable):
-        ensure_data(tmp_path, runner=runner)
+        ensure_data(tmp_path, runner=_no_flatpak)
+
+
+def test_missing_stellarium_downloads_sky_culture(tmp_path, monkeypatch):
+    _no_local_stellarium(monkeypatch)
+    index = {"constellations": [{"id": "CON modern Ori", "common_name": {"native": "Orion"},
+                                 "lines": [[27989, 26727]]}]}
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+    monkeypatch.setattr(catalog.urllib.request, "urlopen",
+                        lambda url, timeout=0: Resp(json.dumps(index).encode()))
+    path = catalog._stellarium_index(_no_flatpak, tmp_path)
+    catalog._build_constellations(path, tmp_path / "constellations.json")
+    assert [c.abbr for c in load_constellations(tmp_path)] == ["Ori"]
 
 
 @pytest.mark.network
