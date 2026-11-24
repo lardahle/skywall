@@ -297,6 +297,7 @@ class SettingsWindow(Adw.PreferencesWindow):
 
 
 def run_settings() -> int:
+    Gtk.Window.set_default_icon_name("skywall")  # installed into hicolor by `skywall install`
     app = Adw.Application(application_id=APP_ID)
     app.connect("activate", lambda a: (a.get_active_window() or SettingsWindow(a)).present())
     return app.run([])

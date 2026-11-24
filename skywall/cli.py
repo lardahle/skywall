@@ -223,6 +223,21 @@ def cmd_open(args) -> int:
     return 0
 
 
+ICON_SOURCE = Path(__file__).resolve().parent.parent / "data" / "icons" / "hicolor"
+ICON_THEME = Path.home() / ".local" / "share" / "icons" / "hicolor"
+
+
+def install_icons(source: Path = ICON_SOURCE, theme: Path = ICON_THEME) -> None:
+    """Copy the app icon into the user's hicolor theme so `Icon=skywall` resolves."""
+    import shutil
+    for png in Path(source).glob("*/apps/skywall.png"):
+        target = Path(theme) / png.relative_to(source)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(png, target)
+    if (Path(theme) / "index.theme").exists():  # only refresh a cache the theme already has
+        _quietly(RUNNER, ["gtk-update-icon-cache", "-q", "-t", "-f", str(theme)])
+
+
 def cmd_install(args) -> int:
     if IS_WINDOWS:
         from . import windows
@@ -236,6 +251,7 @@ def cmd_install(args) -> int:
     template = Path(__file__).resolve().parent.parent / "data" / "skywall.desktop.in"
     apps = Path.home() / ".local" / "share" / "applications"
     apps.mkdir(parents=True, exist_ok=True)
+    install_icons()
     (apps / "skywall.desktop").write_text(template.read_text().replace("@BIN@", exe))
     add_custom_keybinding("Skywall: open in Stellarium", f"{exe} open", "<Super><Alt>s", RUNNER)
     install_extension(bin_path=exe)
