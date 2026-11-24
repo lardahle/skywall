@@ -1,0 +1,47 @@
+# Skywall on Windows — design notes
+
+2026-11-24. Port of Skywall v0.1 (GNOME-only) to Windows 10/11. Branch `windows-support`.
+
+## Goal
+
+The same behaviour on Windows as on GNOME: a star-chart wallpaper of the sky the monitor faces, refreshed every minute, with your previous wallpaper restored when it's turned off, and a one-key hand-off to Stellarium. The GNOME code path stays exactly as it was.
+
+## Shape
+
+Rendering (`sky`, `projection`, `render`, `catalog`, `geomag`) was already platform-neutral (Skyfield, NumPy, pycairo). Only the desktop integration was GNOME-specific, so the port adds one module, `skywall/windows.py`, with the Windows versions of those jobs. `cli.py` picks the version at runtime:
+
+- `cli.IS_WINDOWS` (from `sys.platform`) chooses between `wallpaper`/`scheduler` and `windows` via `_wallpaper()` and `_scheduler()`. The function signatures match, including the unused `runner` argument, so the command flow (`enable`, `disable`, `render`) is shared code.
+- `cmd_install`, `cmd_settings` and the new `cmd_hotkey` have explicit Windows branches.
+
+## Decisions
+
+| Concern | GNOME | Windows | Why |
+| --- | --- | --- | --- |
+| Wallpaper | `gsettings` | `SystemParametersInfoW(SPI_SETDESKWALLPAPER)`; `WallpaperStyle=10` (Fill), `TileWallpaper=0` | The documented API; it broadcasts the change. The saved state is `{path, style, tile}`, kept in the existing `saved_wallpaper` table. |
+| Alternating files | `sky-a.png` / `sky-b.png` | same | Windows also caches by path. A new path forces a refresh. |
+| Every minute | systemd user timer | Task Scheduler task from XML | XML is the only way `schtasks` can set: run on battery (laptops), `IgnoreNew` overlaps, hidden, 5-minute limit, `InteractiveToken` (the wallpaper needs the user's session). `pythonw.exe` avoids a console flash. |
+| Start at login | `systemctl --user enable` | not needed | An enabled task survives sign-out and reboot. `set_autostart` is a no-op. |
+| Render lock | `fcntl.flock` | `msvcrt.locking` on byte 0, polled for blocking mode | The same lock file and semantics. Non-blocking mode raises `BlockingIOError` on both. |
+| Hotkey | GNOME custom keybinding | `skywall hotkey`: `RegisterHotKey(MOD_WIN\|MOD_ALT, 'S')` message loop, started from the Startup folder | `.lnk` hotkeys can't use the Windows key and only register after Explorer rescans. A second listener fails `RegisterHotKey` and exits, so it is single-instance for free. |
+| Right-click | GNOME Shell extension | `HKCU\Software\Classes\DesktopBackground\Shell\Skywall` | Per-user, no admin. On Windows 11 it appears under *Show more options*. The compact menu needs a signed sparse package with an `IExplorerCommand` handler, which isn't worth it for one entry. |
+| App entry | `.desktop` file | Start-menu `.lnk` files via `WScript.Shell` | No extra dependencies. |
+| Settings UI | GTK 4 / libadwaita | `config.toml` in Notepad | GTK on Windows means MSYS2. A native settings window is future work. |
+| Paths | XDG | `%APPDATA%\skywall` (config, roams), `%LOCALAPPDATA%\skywall` (about 50 MB of data, doesn't roam) | Platform conventions. |
+| Constellation lines | Flatpak Stellarium | Program Files or `%LOCALAPPDATA%\Programs\Stellarium`; otherwise download `skycultures/modern/index.json` from Stellarium `v25.3` | The download fallback also removes the hard Stellarium dependency on Linux. The release is pinned so the format can't drift. |
+| Stellarium launch | `flatpak run … --startup-script` | `stellarium.exe --startup-script`; user data in `%APPDATA%\Stellarium` | The same script and Remote Control re-aim path. `notify-send` is replaced by a message box. |
+
+## Testing
+
+- The existing tests describe the GNOME backend. An autouse fixture in `conftest.py` pins `cli.IS_WINDOWS = False` unless a test is marked `windows`, so the GNOME tests run on any OS.
+- `tests/test_windows.py` covers the task XML (repetition, battery, instance policy, logon type, command), enable/disable round-tripping the wallpaper with the Win32 calls stubbed, and `msvcrt` lock exclusivity (on Windows only).
+- Checked by hand on Windows 11 with Python 3.14 on a 4K panel at 150%:
+  - a 3840×2160 render takes about 0.7 s from start to finish, including Python start-up, once the data is cached;
+  - the task's first run returned 0 and switched the wallpaper;
+  - <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> opens Stellarium.
+- `disable` restoring the previous wallpaper is covered only by the stubbed test so far.
+
+## Open
+
+- Confirm the GNOME path still works on the Debian 12 machine before merging.
+- A small native settings window (Tkinter, or a local web page) for Windows.
+- Per-monitor wallpapers through `IDesktopWallpaper`. Multi-monitor is out of scope for v0.1 on both platforms.
