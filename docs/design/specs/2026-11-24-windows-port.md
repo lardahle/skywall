@@ -40,11 +40,11 @@ Rendering (`sky`, `projection`, `render`, `catalog`, `geomag`) was already platf
   - a 3840×2160 render takes about 0.7 s from start to finish, including Python start-up, once the data is cached;
   - the task's first run returned 0 and switched the wallpaper;
   - <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> opens Stellarium.
+- Virtual desktops (Windows 11): checked with *Last-updated time*. The desktop you're on refreshes every minute, because `SPI_SETDESKWALLPAPER` applies to the active desktop. Desktops you aren't viewing may hold an older image until you switch to them; that's acceptable, since only the visible one matters.
 - `disable` restoring the previous wallpaper is covered only by the stubbed test so far.
 
 ## Open
 
 - Confirm the GNOME path still works on the Debian 12 machine before merging.
 - *Match Windows* is read when the window opens. Live switching on a system theme change (`WM_SETTINGCHANGE`) isn't wired up.
-- Check that multiple virtual desktops each get the live wallpaper. *Last-updated time* makes this easy to see.
 - Per-monitor wallpapers through `IDesktopWallpaper`. Multi-monitor is out of scope for v0.1 on both platforms.
